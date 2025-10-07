@@ -1,11 +1,9 @@
-import { FormData, File } from "formdata-node";
-import { FormDataEncoder } from "form-data-encoder";
+import FormData from "form-data";
 import fetch from "node-fetch";
-import { Readable } from "stream";
 
 export const config = {
   api: {
-    bodyParser: false, // desativa o body parser
+    bodyParser: false,
   },
 };
 
@@ -17,27 +15,19 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // Recebe o corpo cru (arquivo)
     const chunks: Uint8Array[] = [];
     for await (const chunk of req) {
       chunks.push(chunk);
     }
     const buffer = Buffer.concat(chunks);
 
-    // Cria o form-data
     const formData = new FormData();
-    formData.set("file", new File([buffer], "upload.bin"));
+    formData.append("file", buffer, { filename: "upload.bin" });
 
-    // Encoder para envio via node-fetch
-    const encoder = new FormDataEncoder(formData);
-
-    // Converte para stream compatível
-    const stream = Readable.from(encoder.encode());
-
-    const response = await fetch("https://filebin.net", {
+    const response = await fetch("https://filebin.net/api/file", {
       method: "POST",
-      body: stream,
-      headers: encoder.headers as any, // node-fetch aceita HeadersInit
+      body: formData as any,
+      headers: formData.getHeaders(),
     });
 
     const text = await response.text();
@@ -49,10 +39,10 @@ export default async function handler(req: any, res: any) {
         .json({ success: false, error: "Upload falhou no Filebin" });
     }
 
-    // Pega o URL retornado no cabeçalho location
+    // O Filebin retorna o URL no cabeçalho 'location'
     const location = response.headers.get("location");
     if (!location) {
-      console.error("Resposta sem cabeçalho location:", text);
+      console.error("Resposta sem location header:", text);
       return res
         .status(500)
         .json({ success: false, error: "Sem link retornado" });
