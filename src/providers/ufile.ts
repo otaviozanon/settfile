@@ -6,27 +6,53 @@ export interface UfileResponse {
 
 export const uploadToUfile = async (
   file: File,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onProgress?: (percent: number) => void
 ): Promise<string> => {
-  try {
-    const formData = new FormData();
-    formData.append("file", file, file.name);
+  return new Promise((resolve, reject) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file, file.name);
 
-    const resp = await fetch("/api/ufile", {
-      method: "POST",
-      body: formData,
-      signal,
-    });
-    if (!resp.ok)
-      throw new Error(`Erro ao realizar upload: ${resp.statusText}`);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/ufile");
 
-    const data: UfileResponse = await resp.json();
-    if (!data.success || !data.url)
-      throw new Error(data.error || "Falha no upload Ufile");
+      // Suporte ao cancelamento
+      if (signal) {
+        signal.addEventListener("abort", () => xhr.abort());
+      }
 
-    return data.url;
-  } catch (err) {
-    console.error("Erro no processo de upload Ufile:", err);
-    throw err;
-  }
+      // Atualiza a barra de progresso
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) {
+          const percent = (event.loaded / event.total) * 100;
+          onProgress(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data: UfileResponse = JSON.parse(xhr.responseText);
+            if (!data.success || !data.url) {
+              return reject(new Error(data.error || "Falha no upload Ufile"));
+            }
+            resolve(data.url);
+          } catch (err) {
+            reject(err);
+          }
+        } else {
+          reject(new Error(`Erro ao realizar upload: ${xhr.statusText}`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("Erro no upload"));
+      xhr.onabort = () => reject(new Error("Upload cancelado"));
+
+      xhr.send(formData);
+    } catch (err) {
+      console.error("Erro no processo de upload Ufile:", err);
+      reject(err);
+    }
+  });
 };

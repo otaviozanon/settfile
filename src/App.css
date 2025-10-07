@@ -96,6 +96,31 @@
   color: #bfe2bf;
   border-radius: 4px;
 }
+.log-panel-wrapper {
+  border: 1px solid #ccc;
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 16px;
+}
+
+.log-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.clear-logs-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  padding: 2px;
+}
+
+.clear-logs-btn:hover {
+  color: #000;
+}
 
 /* Provider Table */
 .providers-table {

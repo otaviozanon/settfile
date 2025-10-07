@@ -10,49 +10,53 @@ export interface Provider {
   name: string;
   maxMB: number;
   expire: string;
-  upload?: (file: File, signal?: AbortSignal) => Promise<string>;
+  upload?: (
+    file: File,
+    signal?: AbortSignal,
+    onProgress?: (percent: number) => void
+  ) => Promise<string>;
 }
 
 export const PROVIDERS: Provider[] = [
   {
     id: "gofile",
     name: "gofile.io",
-    maxMB: 10240,
-    expire: "10 days",
+    maxMB: 10240, // 10 GB
+    expire: "7 days",
     upload: uploadToGofile,
   },
   {
     id: "tmpfiles",
     name: "tmpfiles.org",
-    maxMB: 100,
+    maxMB: 100, // 100 MB grátis
     expire: "60 minutes",
     upload: uploadToTmpfiles,
   },
   {
     id: "catbox",
     name: "catbox.moe",
-    maxMB: 200,
+    maxMB: 200, // 200 MB
     expire: "Indefinite",
     upload: uploadToCatbox,
   },
   {
     id: "freeimage",
     name: "Freeimage.host",
-    maxMB: 64,
+    maxMB: 64, // 64 MB
     expire: "Indefinite",
     upload: uploadToFreeimage,
   },
   {
     id: "filebin",
     name: "Filebin.net",
-    maxMB: 100,
-    expire: "Indefinite",
+    maxMB: 100, // 100 MB
+    expire: "7 days",
     upload: uploadToFilebin,
   },
   {
     id: "ufile",
     name: "Ufile.io",
-    maxMB: 5120,
+    maxMB: 5120, // 5 GB
     expire: "Indefinite",
     upload: uploadToUfile,
   },

@@ -96,9 +96,11 @@ function App() {
     abortControllerRef.current = new AbortController();
 
     const fileSizeMB = selectedFile.size / (1024 * 1024);
+
+    // Ordena do provedor que aceita menos MB para o que aceita mais
     const compatibleProviders = PROVIDERS.filter(
       (p) => p.maxMB >= fileSizeMB
-    ).sort((a, b) => a.maxMB - b.maxMB); // menor -> maior
+    ).sort((a, b) => a.maxMB - b.maxMB);
 
     addLog(`Iniciando upload de ${selectedFile.name}...`);
     setStatusText("Enviando arquivo...");
@@ -113,23 +115,31 @@ function App() {
       addLog(`Tentando enviar para ${provider.name}...`);
 
       try {
-        const url = await uploadWithProgress(
+        if (!provider.upload) {
+          addLog(`✗ Provedor ${provider.name} não implementa upload`);
+          continue;
+        }
+
+        // Chama o upload do provider com AbortSignal e callback de progresso
+        const url = await provider.upload(
           selectedFile,
-          provider,
           abortControllerRef.current.signal,
           setProgress
         );
+
         addLog(`✓ Upload concluído em ${provider.name}`);
         setUploadResult({ url, expire: provider.expire });
         setStatusText(`Sucesso! Arquivo enviado para ${provider.name}`);
         setUploading(false);
-        return; // para assim que tiver sucesso
+        setProgress(100);
+        return; // Para no primeiro upload bem-sucedido
       } catch (err) {
         addLog(`✗ Falha em ${provider.name}: ${(err as Error).message}`);
-        setProgress(0);
+        setProgress(0); // Reseta barra ao falhar
       }
     }
 
+    // Caso todos os provedores falhem
     setStatusText("Erro: todos os provedores falharam.");
     addLog("Todos os provedores falharam.");
     setUploading(false);
@@ -182,12 +192,12 @@ function App() {
       {uploadResult && (
         <div className="download-link">
           <a href={uploadResult.url} target="_blank" rel="noopener noreferrer">
-            Download (expira: {uploadResult.expire})
+            Download (expire: {uploadResult.expire})
           </a>
         </div>
       )}
 
-      <LogPanel logs={logs} />
+      <LogPanel logs={logs} onClear={() => setLogs([])} />
 
       <ProvidersTable providers={paginatedProviders} />
 

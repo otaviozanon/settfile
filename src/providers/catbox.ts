@@ -6,37 +6,56 @@ export interface CatboxResponse {
 
 export const uploadToCatbox = async (
   file: File,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onProgress?: (percent: number) => void
 ): Promise<string> => {
-  try {
-    const formData = new FormData();
-    formData.append("reqtype", "fileupload"); // Necessário para Catbox
-    formData.append("userhash", ""); // Usuário anônimo
-    formData.append("fileToUpload", file, file.name);
+  return new Promise((resolve, reject) => {
+    try {
+      const formData = new FormData();
+      formData.append("reqtype", "fileupload"); // Necessário para Catbox
+      formData.append("userhash", ""); // Usuário anônimo
+      formData.append("fileToUpload", file, file.name);
 
-    const uploadRes = await fetch("/api/catbox", {
-      method: "POST",
-      body: formData,
-      signal,
-    });
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/catbox");
 
-    if (!uploadRes.ok) {
-      throw new Error(`Erro ao realizar upload: ${uploadRes.statusText}`);
+      // Suporte ao cancelamento
+      if (signal) {
+        signal.addEventListener("abort", () => xhr.abort());
+      }
+
+      // Atualiza a barra de progresso
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) {
+          const percent = (event.loaded / event.total) * 100;
+          onProgress(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const url = xhr.responseText.trim();
+          if (!url || !url.startsWith("https://")) {
+            return reject(new Error("Falha no upload ou URL inválida"));
+          }
+
+          const result: CatboxResponse = {
+            status: "ok",
+            data: url,
+          };
+          resolve(result.data!);
+        } else {
+          reject(new Error(`Erro ao realizar upload: ${xhr.statusText}`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("Erro no upload"));
+      xhr.onabort = () => reject(new Error("Upload cancelado"));
+
+      xhr.send(formData);
+    } catch (error) {
+      console.error("Erro no processo de upload Catbox:", error);
+      reject(error);
     }
-
-    const url = await uploadRes.text(); // Catbox retorna a URL em texto puro
-    if (!url || !url.startsWith("https://")) {
-      throw new Error("Falha no upload ou URL inválida");
-    }
-
-    const result: CatboxResponse = {
-      status: "ok",
-      data: url.trim(),
-    };
-
-    return result.data!;
-  } catch (error) {
-    console.error("Erro no processo de upload Catbox:", error);
-    throw error;
-  }
+  });
 };
