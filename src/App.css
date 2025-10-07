@@ -110,12 +110,6 @@
   color: #bfe2bf;
   border-radius: 4px;
 }
-.log-panel-wrapper {
-  border: 1px solid #ccc;
-  padding: 8px;
-  border-radius: 4px;
-  margin-top: 16px;
-}
 
 .log-panel-header {
   display: flex;
@@ -130,6 +124,8 @@
   cursor: pointer;
   color: #888;
   padding: 2px;
+  margin-left: auto;
+  display: flex;
 }
 
 .clear-logs-btn:hover {

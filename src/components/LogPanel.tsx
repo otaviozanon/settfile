@@ -4,17 +4,34 @@ import { Trash2 } from "lucide-react";
 interface Props {
   logs: string[];
   onClear: () => void;
+  setLogs: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
-export const LogPanel: React.FC<Props> = ({ logs, onClear }) => {
+export const LogPanel: React.FC<Props> = ({ logs, setLogs }) => {
+  const handleClearAnimated = () => {
+    console.log("Clearing logs...");
+
+    const copy = [...logs];
+    const interval = setInterval(() => {
+      if (copy.length === 0) {
+        clearInterval(interval);
+        console.log("Logs cleared!");
+        return;
+      }
+      const removed = copy.pop();
+      console.log("Removing:", removed);
+      setLogs([...copy]);
+    }, 150);
+  };
+
   return (
     <div className="log-panel-wrapper">
       <div className="log-panel-header">
         <button
           type="button"
-          onClick={onClear}
+          onClick={handleClearAnimated}
           className="clear-logs-btn"
-          title="Limpar logs"
+          title="Clear logs"
         >
           <Trash2 size={16} />
         </button>

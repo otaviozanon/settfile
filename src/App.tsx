@@ -188,7 +188,7 @@ function App() {
         </div>
       )}
 
-      <LogPanel logs={logs} onClear={() => setLogs([])} />
+      <LogPanel logs={logs} onClear={() => setLogs([])} setLogs={setLogs} />
 
       <ProvidersTable providers={paginatedProviders} />
 
