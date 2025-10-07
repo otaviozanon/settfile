@@ -9,17 +9,12 @@ interface Props {
 
 export const LogPanel: React.FC<Props> = ({ logs, setLogs }) => {
   const handleClearAnimated = () => {
-    console.log("Clearing logs...");
-
     const copy = [...logs];
     const interval = setInterval(() => {
       if (copy.length === 0) {
         clearInterval(interval);
-        console.log("Logs cleared!");
         return;
       }
-      const removed = copy.pop();
-      console.log("Removing:", removed);
       setLogs([...copy]);
     }, 150);
   };
