@@ -1,6 +1,12 @@
 import fetch from "node-fetch";
 import FormData from "form-data";
 
+export const config = {
+  api: {
+    bodyParser: false, // Desativa o body parser para permitir upload binário
+  },
+};
+
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
     return res
@@ -9,36 +15,47 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    // Recebe o corpo cru (arquivo)
     const chunks: Uint8Array[] = [];
     for await (const chunk of req) {
       chunks.push(chunk);
     }
     const buffer = Buffer.concat(chunks);
 
+    // Monta o form-data
     const formData = new FormData();
-    formData.append("file", buffer, {
-      filename: "upload.bin",
-      contentType: req.headers["content-type"] || "application/octet-stream",
-    });
+    formData.append("file", buffer, "upload.bin");
 
-    const uploadResponse = await fetch("https://filebin.net", {
+    // Faz upload direto pro Filebin
+    const response = await fetch("https://filebin.net", {
       method: "POST",
       body: formData as any,
     });
 
-    const text = await uploadResponse.text();
+    const text = await response.text();
 
-    if (!uploadResponse.ok) {
-      console.error("Filebin response:", text);
-      return res.status(500).json({ success: false, error: "Upload failed" });
+    if (!response.ok) {
+      console.error("Filebin error:", text);
+      return res
+        .status(500)
+        .json({ success: false, error: "Upload falhou no Filebin" });
     }
 
-    const url = uploadResponse.headers.get("location");
-    return res.status(200).json({ success: true, url });
-  } catch (error) {
-    console.error("Erro no processo de upload Filebin:", error);
-    return res
-      .status(500)
-      .json({ success: false, error: (error as Error).message });
+    // O Filebin retorna o URL no cabeçalho `location`
+    const location = response.headers.get("location");
+    if (!location) {
+      console.error("Resposta sem cabeçalho location:", text);
+      return res
+        .status(500)
+        .json({ success: false, error: "Sem link retornado" });
+    }
+
+    // Monta o link final
+    const fileUrl = `https://filebin.net${location.split("filebin.net")[1]}`;
+
+    return res.status(200).json({ success: true, url: fileUrl });
+  } catch (err: any) {
+    console.error("Erro no processo de upload Filebin:", err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 }
