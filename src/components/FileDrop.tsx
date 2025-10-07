@@ -29,7 +29,7 @@ export const FileDrop: React.FC<Props> = ({
         e.stopPropagation();
       }}
       onDrop={handleDrop}
-      title="Clique ou arraste o arquivo"
+      title="Click or drag a file"
     >
       <input
         ref={fileInputRef}
@@ -46,7 +46,7 @@ export const FileDrop: React.FC<Props> = ({
           e.target.files?.[0] && handleFileSelect(e.target.files[0])
         }
       />
-      <div>Arraste um arquivo aqui ou clique para escolher</div>
+      <div>Drag a file here or click to select</div>
     </div>
   );
 };

@@ -20,18 +20,14 @@ function App() {
   const [logs, setLogs] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [dragActive, setDragActive] = useState(false);
-  const [statusText, setStatusText] = useState("Pronto.");
+  const [statusText, setStatusText] = useState("Ready.");
   const [currentAttempt, setCurrentAttempt] = useState("-");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const itemsPerPage = 5;
 
   const addLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+    const timestamp = new Date().toLocaleTimeString("en-US", { hour12: false });
     setLogs((prev) => [`[${timestamp}] ${message}`, ...prev].slice(0, 50));
   };
 
@@ -43,22 +39,13 @@ function App() {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
-  const tryUpload = async (
-    provider: (typeof PROVIDERS)[0],
-    file: File,
-    signal: AbortSignal
-  ) => {
-    if (!provider.upload) throw new Error("Provedor não implementado");
-    return provider.upload(file, signal);
-  };
-
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
     setUploadResult(null);
     setProgress(0);
-    setStatusText("Arquivo selecionado.");
+    setStatusText("File selected.");
     setCurrentAttempt("-");
-    addLog(`Arquivo selecionado: ${file.name} (${formatFileSize(file.size)})`);
+    addLog(`File selected: ${file.name} (${formatFileSize(file.size)})`);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -74,16 +61,14 @@ function App() {
     signal: AbortSignal,
     onProgress: (p: number) => void
   ): Promise<string> => {
-    if (!provider.upload) throw new Error("Provedor não implementado");
-
-    onProgress(0); // inicia a barra
+    if (!provider.upload) throw new Error("Provider not implemented");
+    onProgress(0);
     try {
-      // Chama o upload do provider
-      const url = await provider.upload(file, signal);
-      onProgress(100); // completa a barra
+      const url = await provider.upload(file, signal, onProgress);
+      onProgress(100);
       return url;
     } catch (err) {
-      onProgress(0); // reset caso falhe
+      onProgress(0);
       throw err;
     }
   };
@@ -97,14 +82,12 @@ function App() {
     abortControllerRef.current = new AbortController();
 
     const fileSizeMB = selectedFile.size / (1024 * 1024);
-
-    // Ordena do provedor que aceita menos MB para o que aceita mais
     const compatibleProviders = PROVIDERS.filter(
       (p) => p.maxMB >= fileSizeMB
     ).sort((a, b) => a.maxMB - b.maxMB);
 
-    addLog(`Iniciando upload de ${selectedFile.name}...`);
-    setStatusText("Enviando arquivo...");
+    addLog(`Starting upload: ${selectedFile.name}...`);
+    setStatusText("Uploading file...");
 
     let attemptCount = 0;
 
@@ -113,36 +96,34 @@ function App() {
 
       attemptCount++;
       setCurrentAttempt(`${attemptCount}/${compatibleProviders.length}`);
-      addLog(`Tentando enviar para ${provider.name}...`);
+      addLog(`Trying provider: ${provider.name}...`);
 
       try {
         if (!provider.upload) {
-          addLog(`✗ Provedor ${provider.name} não implementa upload`);
+          addLog(`✗ Provider ${provider.name} not implemented`);
           continue;
         }
 
-        // Chama o upload do provider com AbortSignal e callback de progresso
         const url = await provider.upload(
           selectedFile,
           abortControllerRef.current.signal,
           setProgress
         );
 
-        addLog(`✓ Upload concluído em ${provider.name}`);
+        addLog(`✓ Upload completed on ${provider.name}`);
         setUploadResult({ url, expire: provider.expire });
-        setStatusText(`Sucesso! Arquivo enviado para ${provider.name}`);
+        setStatusText(`Success! File uploaded to ${provider.name}`);
         setUploading(false);
         setProgress(100);
-        return; // Para no primeiro upload bem-sucedido
+        return;
       } catch (err) {
-        addLog(`✗ Falha em ${provider.name}: ${(err as Error).message}`);
-        setProgress(0); // Reseta barra ao falhar
+        addLog(`✗ Failed on ${provider.name}: ${(err as Error).message}`);
+        setProgress(0);
       }
     }
 
-    // Caso todos os provedores falhem
-    setStatusText("Erro: todos os provedores falharam.");
-    addLog("Todos os provedores falharam.");
+    setStatusText("Error: all providers failed.");
+    addLog("All providers failed.");
     setUploading(false);
     setCurrentAttempt("-");
   };
@@ -166,11 +147,11 @@ function App() {
 
       {selectedFile && (
         <div className="file-info">
-          <span>Nome: {selectedFile.name}</span>
-          <span>Tamanho: {formatFileSize(selectedFile.size)}</span>
-          <span>Tipo: {selectedFile.type || "desconhecido"}</span>
+          <span>Name: {selectedFile.name}</span>
+          <span>Size: {formatFileSize(selectedFile.size)}</span>
+          <span>Type: {selectedFile.type || "unknown"}</span>
           <span>
-            Extensão:{" "}
+            Extension:{" "}
             {selectedFile.name.split(".").pop()?.toUpperCase() || "N/A"}
           </span>
         </div>

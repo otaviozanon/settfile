@@ -17,12 +17,12 @@ export const uploadToFilebin = async (
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/filebin");
 
-      // Suporte ao cancelamento
+      // Support for cancellation
       if (signal) {
         signal.addEventListener("abort", () => xhr.abort());
       }
 
-      // Atualiza a barra de progresso
+      // Update progress bar
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {
           const percent = (event.loaded / event.total) * 100;
@@ -35,25 +35,23 @@ export const uploadToFilebin = async (
           try {
             const result: FilebinResponse = JSON.parse(xhr.responseText);
             if (!result.success || !result.url) {
-              return reject(
-                new Error(result.error || "Falha no upload Filebin")
-              );
+              return reject(new Error(result.error || "Filebin upload failed"));
             }
             resolve(result.url);
           } catch (err) {
             reject(err);
           }
         } else {
-          reject(new Error(`Erro ao realizar upload: ${xhr.statusText}`));
+          reject(new Error(`Error performing upload: ${xhr.statusText}`));
         }
       };
 
-      xhr.onerror = () => reject(new Error("Erro no upload"));
-      xhr.onabort = () => reject(new Error("Upload cancelado"));
+      xhr.onerror = () => reject(new Error("Upload error"));
+      xhr.onabort = () => reject(new Error("Upload canceled"));
 
       xhr.send(formData);
     } catch (error) {
-      console.error("Erro no processo de upload Filebin:", error);
+      console.error("Error during Filebin upload process:", error);
       reject(error);
     }
   });

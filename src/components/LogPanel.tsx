@@ -3,7 +3,7 @@ import { Trash2 } from "lucide-react";
 
 interface Props {
   logs: string[];
-  onClear: () => void; // callback para limpar logs
+  onClear: () => void;
 }
 
 export const LogPanel: React.FC<Props> = ({ logs, onClear }) => {

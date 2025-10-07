@@ -1,6 +1,6 @@
 export interface CatboxResponse {
-  status: string; // "ok" ou "error"
-  data?: string; // URL do arquivo enviado
+  status: string;
+  data?: string;
   message?: string;
 }
 
@@ -12,19 +12,17 @@ export const uploadToCatbox = async (
   return new Promise((resolve, reject) => {
     try {
       const formData = new FormData();
-      formData.append("reqtype", "fileupload"); // Necessário para Catbox
-      formData.append("userhash", ""); // Usuário anônimo
+      formData.append("reqtype", "fileupload");
+      formData.append("userhash", "");
       formData.append("fileToUpload", file, file.name);
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/catbox");
 
-      // Suporte ao cancelamento
       if (signal) {
         signal.addEventListener("abort", () => xhr.abort());
       }
 
-      // Atualiza a barra de progresso
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {
           const percent = (event.loaded / event.total) * 100;
@@ -36,7 +34,7 @@ export const uploadToCatbox = async (
         if (xhr.status >= 200 && xhr.status < 300) {
           const url = xhr.responseText.trim();
           if (!url || !url.startsWith("https://")) {
-            return reject(new Error("Falha no upload ou URL inválida"));
+            return reject(new Error("Upload failed or invalid URL"));
           }
 
           const result: CatboxResponse = {
@@ -45,16 +43,16 @@ export const uploadToCatbox = async (
           };
           resolve(result.data!);
         } else {
-          reject(new Error(`Erro ao realizar upload: ${xhr.statusText}`));
+          reject(new Error(`Error performing upload: ${xhr.statusText}`));
         }
       };
 
-      xhr.onerror = () => reject(new Error("Erro no upload"));
-      xhr.onabort = () => reject(new Error("Upload cancelado"));
+      xhr.onerror = () => reject(new Error("Upload error"));
+      xhr.onabort = () => reject(new Error("Upload canceled"));
 
       xhr.send(formData);
     } catch (error) {
-      console.error("Erro no processo de upload Catbox:", error);
+      console.error("Error during Catbox upload process:", error);
       reject(error);
     }
   });

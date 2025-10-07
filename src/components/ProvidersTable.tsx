@@ -8,13 +8,13 @@ interface Props {
 export const ProvidersTable: React.FC<Props> = ({ providers }) => {
   return (
     <>
-      <h2>Servidores disponíveis</h2>
+      <h2>Available Servers</h2>
       <table className="providers-table">
         <thead>
           <tr>
-            <th>Servidor</th>
-            <th>Limite</th>
-            <th>Expiração</th>
+            <th>Server</th>
+            <th>Limit</th>
+            <th>Expiration</th>
           </tr>
         </thead>
         <tbody>

@@ -17,12 +17,12 @@ export const uploadToUfile = async (
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/ufile");
 
-      // Suporte ao cancelamento
+      // Support for cancellation
       if (signal) {
         signal.addEventListener("abort", () => xhr.abort());
       }
 
-      // Atualiza a barra de progresso
+      // Update progress bar
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {
           const percent = (event.loaded / event.total) * 100;
@@ -35,23 +35,23 @@ export const uploadToUfile = async (
           try {
             const data: UfileResponse = JSON.parse(xhr.responseText);
             if (!data.success || !data.url) {
-              return reject(new Error(data.error || "Falha no upload Ufile"));
+              return reject(new Error(data.error || "Ufile upload failed"));
             }
             resolve(data.url);
           } catch (err) {
             reject(err);
           }
         } else {
-          reject(new Error(`Erro ao realizar upload: ${xhr.statusText}`));
+          reject(new Error(`Error performing upload: ${xhr.statusText}`));
         }
       };
 
-      xhr.onerror = () => reject(new Error("Erro no upload"));
-      xhr.onabort = () => reject(new Error("Upload cancelado"));
+      xhr.onerror = () => reject(new Error("Upload error"));
+      xhr.onabort = () => reject(new Error("Upload canceled"));
 
       xhr.send(formData);
     } catch (err) {
-      console.error("Erro no processo de upload Ufile:", err);
+      console.error("Error during Ufile upload process:", err);
       reject(err);
     }
   });

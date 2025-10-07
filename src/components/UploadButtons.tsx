@@ -28,7 +28,7 @@ export const UploadButtons: React.FC<Props> = ({
         onClick={handleUpload}
         disabled={uploading || !selectedFile}
       >
-        {uploading ? "Enviando..." : "Enviar"}
+        {uploading ? "Uploading..." : "Upload"}
       </button>
       <button
         className="cs-btn cancel-btn"
@@ -36,16 +36,16 @@ export const UploadButtons: React.FC<Props> = ({
           if (abortControllerRef.current) {
             abortControllerRef.current.abort();
             setUploading(false);
-            setStatusText("Upload cancelado.");
-            addLog("Upload cancelado pelo usuário.");
+            setStatusText("Upload canceled.");
+            addLog("Upload canceled by user.");
           }
         }}
         disabled={!uploading}
       >
-        Cancelar
+        Cancel
       </button>
       <div className="attempt-info">
-        Tentativa: <span>{currentAttempt}</span>
+        Attempt: <span>{currentAttempt}</span>
       </div>
     </div>
   );
