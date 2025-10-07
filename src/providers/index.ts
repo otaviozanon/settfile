@@ -1,4 +1,4 @@
-import { uploadToFileio } from "./fileio";
+import { uploadToUfile } from "./ufile";
 // import { uploadToCatbox } from "./catBox";
 // import { uploadToFilebin } from "./filebin";
 // import { uploadToFreeimage } from "./freeimage";
@@ -50,10 +50,10 @@ export const PROVIDERS: Provider[] = [
   //   upload: uploadToFilebin,
   // },
   {
-    id: "fileio",
-    name: "file.io",
-    maxMB: 100,
-    expire: "7 days",
-    upload: uploadToFileio,
+    id: "ufile",
+    name: "Ufile.io",
+    maxMB: 200,
+    expire: "Indefinite",
+    upload: uploadToUfile,
   },
 ];
