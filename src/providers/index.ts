@@ -1,8 +1,9 @@
-import { uploadToCatbox } from "./catBox";
-import { uploadToFilebin } from "./filebin";
-import { uploadToFreeimage } from "./freeimage";
-import { uploadToGofile } from "./gofile";
-import { uploadToTmpfiles } from "./tmpfiles";
+import { uploadToZeroXZero } from "./0x0";
+// import { uploadToCatbox } from "./catBox";
+// import { uploadToFilebin } from "./filebin";
+// import { uploadToFreeimage } from "./freeimage";
+// import { uploadToGofile } from "./gofile";
+// import { uploadToTmpfiles } from "./tmpfiles";
 
 export interface Provider {
   id: string;
@@ -41,11 +42,18 @@ export const PROVIDERS: Provider[] = [
   //   expire: "Indefinite",
   //   upload: uploadToFreeimage,
   // },
+  // {
+  //   id: "filebin",
+  //   name: "Filebin.net",
+  //   maxMB: 100,
+  //   expire: "Indefinite",
+  //   upload: uploadToFilebin,
+  // },
   {
-    id: "filebin",
-    name: "Filebin.net",
+    id: "0x0",
+    name: "0x0.st",
     maxMB: 100,
     expire: "Indefinite",
-    upload: uploadToFilebin,
+    upload: uploadToZeroXZero,
   },
 ];
