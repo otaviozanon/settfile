@@ -1,0 +1,125 @@
+.app-container {
+  width: 95vw;
+  max-width: 880px;
+  background: var(--panel);
+  border: 3px solid var(--accent);
+  padding: 18px;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+}
+
+.file-info span {
+  color: var(--accent);
+  margin-right: 12px;
+  font-size: 13px;
+}
+
+.status-text {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #cfeecf;
+}
+
+.download-link a {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+/* FileDrop */
+.file-drop {
+  position: relative;
+  padding: 26px;
+  border: 2px dashed var(--muted);
+  background: #2e332e;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.12s;
+  border-radius: 4px;
+}
+.file-drop.active {
+  border-color: var(--accent);
+  background: #394039;
+}
+
+/* UploadButtons */
+.upload-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+.upload-buttons .cs-btn {
+  width: 160px;
+}
+.upload-buttons .cancel-btn {
+  width: 120px;
+  background: #a33;
+}
+.attempt-info {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ProgressBar */
+.progress-bar {
+  height: 18px;
+  border: 2px solid var(--accent);
+  background: #0b0b0b;
+  margin-top: 12px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(127, 255, 127, 0.14),
+    rgba(127, 255, 127, 0.5)
+  );
+  transition: width 0.12s;
+}
+
+/* LogPanel */
+.log-panel {
+  margin-top: 10px;
+  background: #0b0b0b;
+  padding: 8px;
+  height: 120px;
+  overflow-y: auto;
+  border: 1px solid #2b2b2b;
+  font-size: 12px;
+  color: #bfe2bf;
+  border-radius: 4px;
+}
+
+/* Provider Table */
+.providers-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+  font-size: 13px;
+}
+.providers-table th,
+.providers-table td {
+  border: 1px solid #3a3a3a;
+  padding: 7px;
+}
+.providers-table th {
+  text-align: left;
+  background: #2b2b2b;
+  color: var(--muted);
+}
+
+/* Pagination */
+.pagination {
+  margin-top: 10px;
+  text-align: center;
+}
+.pagination .cs-btn {
+  margin: 0 4px;
+}

@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #1a1a1a;
+  --panel: #222;
+  --accent: #7fff7f;
+  --muted: #8c9284;
+}
+
+body {
+  background: var(--bg);
+  color: #e6ffe6;
+  font-family: "Courier New", monospace;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  min-height: 100vh;
+}
