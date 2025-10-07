@@ -12,25 +12,25 @@ export const uploadToFileio = async (
     const formData = new FormData();
     formData.append("file", file, file.name);
 
-    const uploadRes = await fetch("/api/fileio", {
+    const response = await fetch("/api/fileio", {
       method: "POST",
       body: formData,
       signal,
     });
 
-    if (!uploadRes.ok) {
-      throw new Error(`Erro ao realizar upload: ${uploadRes.statusText}`);
+    if (!response.ok) {
+      throw new Error(`Erro ao realizar upload: ${response.statusText}`);
     }
 
-    const result: FileioResponse = await uploadRes.json();
+    const result: FileioResponse = await response.json();
 
     if (!result.success || !result.url) {
       throw new Error(result.error || "Falha no upload file.io");
     }
 
     return result.url;
-  } catch (error) {
-    console.error("Erro no processo de upload file.io:", error);
-    throw error;
+  } catch (err) {
+    console.error("Erro no processo de upload file.io:", err);
+    throw err;
   }
 };
