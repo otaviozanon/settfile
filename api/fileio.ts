@@ -16,6 +16,7 @@ export default async function handler(
   }
 
   try {
+    // Parse multipart/form-data
     const form = formidable({ multiples: false });
     const [fields, files] = await new Promise<[any, Files]>((resolve, reject) =>
       form.parse(req, (err, fields, files) =>
@@ -30,20 +31,35 @@ export default async function handler(
 
     const fileBuffer = await fs.promises.readFile(file.filepath);
 
-    // Converte Buffer para Uint8Array para TypeScript
+    // Converte Buffer para Uint8Array
     const uint8 = new Uint8Array(fileBuffer);
 
-    const blob = new Blob([uint8], { type: "application/octet-stream" });
-
     const formData = new FormData();
-    formData.append("file", blob, file.originalFilename || "upload.bin");
+    formData.append(
+      "file",
+      new Blob([uint8]),
+      file.originalFilename || "upload.bin"
+    );
 
+    // Adiciona headers para forçar JSON
     const response = await fetch("https://file.io", {
       method: "POST",
       body: formData,
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (Node.js fetch)",
+      },
     });
 
-    const data = await response.json();
+    const text = await response.text();
+
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("Resposta inesperada do file.io:", text);
+      throw new Error("Resposta inválida do file.io");
+    }
 
     if (!data.success || !data.link) throw new Error("Falha no upload file.io");
 
