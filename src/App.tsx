@@ -67,6 +67,26 @@ function App() {
     if (file) handleFileSelect(file);
   };
 
+  const uploadWithProgress = async (
+    file: File,
+    provider: (typeof PROVIDERS)[0],
+    signal: AbortSignal,
+    onProgress: (p: number) => void
+  ): Promise<string> => {
+    if (!provider.upload) throw new Error("Provedor não implementado");
+
+    onProgress(0); // inicia a barra
+    try {
+      // Chama o upload do provider
+      const url = await provider.upload(file, signal);
+      onProgress(100); // completa a barra
+      return url;
+    } catch (err) {
+      onProgress(0); // reset caso falhe
+      throw err;
+    }
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) return;
 
@@ -76,12 +96,15 @@ function App() {
     abortControllerRef.current = new AbortController();
 
     const fileSizeMB = selectedFile.size / (1024 * 1024);
-    const compatibleProviders = PROVIDERS.filter((p) => p.maxMB >= fileSizeMB);
+    const compatibleProviders = PROVIDERS.filter(
+      (p) => p.maxMB >= fileSizeMB
+    ).sort((a, b) => a.maxMB - b.maxMB); // menor -> maior
 
     addLog(`Iniciando upload de ${selectedFile.name}...`);
     setStatusText("Enviando arquivo...");
 
     let attemptCount = 0;
+
     for (const provider of compatibleProviders) {
       if (abortControllerRef.current?.signal.aborted) break;
 
@@ -90,17 +113,17 @@ function App() {
       addLog(`Tentando enviar para ${provider.name}...`);
 
       try {
-        const url = await tryUpload(
-          provider,
+        const url = await uploadWithProgress(
           selectedFile,
-          abortControllerRef.current.signal
+          provider,
+          abortControllerRef.current.signal,
+          setProgress
         );
         addLog(`✓ Upload concluído em ${provider.name}`);
         setUploadResult({ url, expire: provider.expire });
-        setProgress(100);
         setStatusText(`Sucesso! Arquivo enviado para ${provider.name}`);
         setUploading(false);
-        return;
+        return; // para assim que tiver sucesso
       } catch (err) {
         addLog(`✗ Falha em ${provider.name}: ${(err as Error).message}`);
         setProgress(0);
