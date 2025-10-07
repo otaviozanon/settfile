@@ -1,9 +1,11 @@
+import { FormData, File } from "formdata-node";
+import { FormDataEncoder } from "form-data-encoder";
 import fetch from "node-fetch";
-import FormData from "form-data";
+import { Readable } from "stream";
 
 export const config = {
   api: {
-    bodyParser: false, // Desativa o body parser para permitir upload binário
+    bodyParser: false, // desativa o body parser
   },
 };
 
@@ -22,14 +24,20 @@ export default async function handler(req: any, res: any) {
     }
     const buffer = Buffer.concat(chunks);
 
-    // Monta o form-data
+    // Cria o form-data
     const formData = new FormData();
-    formData.append("file", buffer, "upload.bin");
+    formData.set("file", new File([buffer], "upload.bin"));
 
-    // Faz upload direto pro Filebin
+    // Encoder para envio via node-fetch
+    const encoder = new FormDataEncoder(formData);
+
+    // Converte para stream compatível
+    const stream = Readable.from(encoder.encode());
+
     const response = await fetch("https://filebin.net", {
       method: "POST",
-      body: formData as any,
+      body: stream,
+      headers: encoder.headers as any, // node-fetch aceita HeadersInit
     });
 
     const text = await response.text();
@@ -41,7 +49,7 @@ export default async function handler(req: any, res: any) {
         .json({ success: false, error: "Upload falhou no Filebin" });
     }
 
-    // O Filebin retorna o URL no cabeçalho `location`
+    // Pega o URL retornado no cabeçalho location
     const location = response.headers.get("location");
     if (!location) {
       console.error("Resposta sem cabeçalho location:", text);
@@ -50,9 +58,7 @@ export default async function handler(req: any, res: any) {
         .json({ success: false, error: "Sem link retornado" });
     }
 
-    // Monta o link final
     const fileUrl = `https://filebin.net${location.split("filebin.net")[1]}`;
-
     return res.status(200).json({ success: true, url: fileUrl });
   } catch (err: any) {
     console.error("Erro no processo de upload Filebin:", err);
