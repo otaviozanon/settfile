@@ -20,6 +20,7 @@ export default async function handler(
   }
 
   try {
+    // Parse multipart/form-data
     const form = formidable({ multiples: false });
     const [fields, files] = await new Promise<[any, Files]>(
       (resolve, reject) => {
@@ -44,7 +45,6 @@ export default async function handler(
     }
 
     const fileBuffer = await fs.promises.readFile(file.filepath);
-
     if (!fileBuffer || fileBuffer.length === 0) {
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
@@ -52,34 +52,44 @@ export default async function handler(
       return;
     }
 
-    // Faz o upload para 0x0.st
+    // Converte buffer para Blob/Uint8Array (compatível com fetch Node 18+)
     const fileData = new Uint8Array(fileBuffer);
-    const response = await fetch("https://0x0.st", {
+    const formData = new FormData();
+    formData.append("file", new Blob([fileData]), file.originalFilename);
+
+    // POST para file.io
+    const response = await fetch("https://file.io/?expires=1w", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-      },
-      body: fileData,
+      body: formData as any, // Node-fetch aceita FormData
     });
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("0x0.st error:", text);
+      console.error("file.io error:", text);
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
       res.end(
-        JSON.stringify({ success: false, error: "Upload falhou no 0x0.st" })
+        JSON.stringify({ success: false, error: "Upload falhou no file.io" })
       );
       return;
     }
 
-    const fileUrl = (await response.text()).trim();
+    const result = await response.json();
+
+    if (!result.success || !result.link) {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({ success: false, error: "file.io não retornou link" })
+      );
+      return;
+    }
 
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ success: true, url: fileUrl }));
+    res.end(JSON.stringify({ success: true, url: result.link }));
   } catch (err: any) {
-    console.error("Erro no processo de upload 0x0.st:", err);
+    console.error("Erro no upload file.io:", err);
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: false, error: err.message }));
