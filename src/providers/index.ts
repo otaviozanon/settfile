@@ -53,7 +53,7 @@ export const PROVIDERS: Provider[] = [
   {
     id: "ufile",
     name: "Ufile.io",
-    maxMB: 5000,
+    maxMB: 5120,
     expire: "Indefinite",
     upload: uploadToUfile,
   },
