@@ -13,9 +13,8 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   try {
-    // Lê o FormData enviado pelo frontend
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const file = formData.get("file") as File;
 
     if (!file) {
       return new Response(
@@ -24,23 +23,21 @@ export default async function handler(req: Request): Promise<Response> {
       );
     }
 
-    // Envia o arquivo para o Filebin
-    const uploadRes = await fetch("https://filebin.net/", {
-      method: "POST",
-      body: formData,
-    });
+    const binName = Math.random().toString(36).substring(2, 10);
+    const uploadRes = await fetch(
+      `https://filebin.net/${binName}/${file.name}`,
+      {
+        method: "POST",
+        body: file.stream(),
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+      }
+    );
 
     if (!uploadRes.ok) {
-      throw new Error(`Erro ao realizar upload: ${uploadRes.statusText}`);
+      throw new Error(`Erro ao enviar para Filebin: ${uploadRes.statusText}`);
     }
 
-    // Filebin retorna o bin gerado no cabeçalho Location
-    const location = uploadRes.headers.get("location");
-    if (!location) {
-      throw new Error("Falha ao obter link de upload do Filebin");
-    }
-
-    const fileUrl = `https://filebin.net${location}`;
+    const fileUrl = `https://filebin.net/${binName}/${file.name}`;
 
     return new Response(JSON.stringify({ success: true, url: fileUrl }), {
       status: 200,
