@@ -14,8 +14,12 @@ export const uploadToFilebin = async (
 
     const uploadRes = await fetch("/api/filebin", {
       method: "POST",
-      body: formData,
+      body: file,
       signal,
+      headers: {
+        "Content-Disposition": `attachment; filename="${file.name}"`,
+        "Content-Type": file.type || "application/octet-stream",
+      },
     });
 
     if (!uploadRes.ok) {
