@@ -1,61 +1,44 @@
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+import fetch from "node-fetch";
+import FormData from "form-data";
 
-export default async function handler(req: Request): Promise<Response> {
+export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ success: false, error: "Method not allowed" }),
-      {
-        status: 405,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return res
+      .status(405)
+      .json({ success: false, error: "Method not allowed" });
   }
 
   try {
-    // Converte o corpo inteiro em ArrayBuffer (o arquivo enviado)
-    const body = await req.arrayBuffer();
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
 
-    // Pega o nome do arquivo a partir do header (se o fetch enviou com filename)
-    const contentDisposition = req.headers.get("content-disposition");
-    const fileNameMatch = contentDisposition?.match(/filename="(.+?)"/);
-    const fileName = fileNameMatch?.[1] || "upload.bin";
+    const formData = new FormData();
+    formData.append("file", buffer, {
+      filename: "upload.bin",
+      contentType: req.headers["content-type"] || "application/octet-stream",
+    });
 
-    const binName = Math.random().toString(36).substring(2, 10);
+    const uploadResponse = await fetch("https://filebin.net", {
+      method: "POST",
+      body: formData as any,
+    });
 
-    const uploadRes = await fetch(
-      `https://filebin.net/${binName}/${fileName}`,
-      {
-        method: "POST",
-        body: body,
-        headers: {
-          "Content-Type":
-            req.headers.get("content-type") || "application/octet-stream",
-        },
-      }
-    );
+    const text = await uploadResponse.text();
 
-    if (!uploadRes.ok) {
-      throw new Error(`Erro ao enviar para Filebin: ${uploadRes.statusText}`);
+    if (!uploadResponse.ok) {
+      console.error("Filebin response:", text);
+      return res.status(500).json({ success: false, error: "Upload failed" });
     }
 
-    const fileUrl = `https://filebin.net/${binName}/${fileName}`;
-
-    return new Response(JSON.stringify({ success: true, url: fileUrl }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error: any) {
+    const url = uploadResponse.headers.get("location");
+    return res.status(200).json({ success: true, url });
+  } catch (error) {
     console.error("Erro no processo de upload Filebin:", error);
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return res
+      .status(500)
+      .json({ success: false, error: (error as Error).message });
   }
 }
