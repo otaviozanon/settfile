@@ -10,7 +10,6 @@ export const LogPanel: React.FC<Props> = ({ logs, onClear }) => {
   return (
     <div className="log-panel-wrapper">
       <div className="log-panel-header">
-        <span>Logs</span>
         <button
           type="button"
           onClick={onClear}

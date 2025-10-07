@@ -7,6 +7,7 @@ import { LogPanel } from "./components/LogPanel";
 import { ProvidersTable } from "./components/ProvidersTable";
 import { Pagination } from "./components/Pagination";
 import "./App.css";
+import { Download } from "lucide-react";
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -191,8 +192,17 @@ function App() {
 
       {uploadResult && (
         <div className="download-link">
-          <a href={uploadResult.url} target="_blank" rel="noopener noreferrer">
-            Download (expire: {uploadResult.expire})
+          <a
+            href={uploadResult.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="download-button"
+          >
+            <Download size={16} style={{ marginRight: "6px" }} />
+            Download
+            <span className="expire-text">
+              (expires: {uploadResult.expire})
+            </span>
           </a>
         </div>
       )}

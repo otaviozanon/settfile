@@ -20,13 +20,27 @@
   color: #cfeecf;
 }
 
-.download-link a {
-  display: inline-block;
+/* Download Button */
+.download-link a.download-button {
+  display: inline-flex;
+  align-items: center;
   padding: 6px 12px;
   background: var(--accent);
   color: #fff;
   border-radius: 4px;
   text-decoration: none;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.download-link a.download-button:hover {
+  background: #2b7a2b; /* ligeiro escurecimento para hover */
+}
+
+.download-link .expire-text {
+  margin-left: 6px;
+  font-size: 12px;
+  color: #e0e0e0;
 }
 
 /* FileDrop */
