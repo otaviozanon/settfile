@@ -1,9 +1,8 @@
-// import { uploadToCatbox } from "./catBox";
-// import { uploadToFilebin } from "./filebin";
-// import { uploadToFreeimage } from "./freeimage";
-// import { uploadToGofile } from "./gofile";
-// import { uploadToTmpfiles } from "./tmpfiles";
-
+import { uploadToCatbox } from "./catbox";
+import { uploadToFilebin } from "./filebin";
+import { uploadToFreeimage } from "./freeimage";
+import { uploadToGofile } from "./gofile";
+import { uploadToTmpfiles } from "./tmpfiles";
 import { uploadToUfile } from "./ufile";
 
 export interface Provider {
@@ -15,41 +14,41 @@ export interface Provider {
 }
 
 export const PROVIDERS: Provider[] = [
-  // {
-  //   id: "gofile",
-  //   name: "gofile.io",
-  //   maxMB: 10240,
-  //   expire: "10 days",
-  //   upload: uploadToGofile,
-  // },
-  // {
-  //   id: "tmpfiles",
-  //   name: "tmpfiles.org",
-  //   maxMB: 100,
-  //   expire: "60 minutes",
-  //   upload: uploadToTmpfiles,
-  // },
-  // {
-  //   id: "catbox",
-  //   name: "catbox.moe",
-  //   maxMB: 200,
-  //   expire: "Indefinite",
-  //   upload: uploadToCatbox,
-  // },
-  // {
-  //   id: "freeimage",
-  //   name: "Freeimage.host",
-  //   maxMB: 64,
-  //   expire: "Indefinite",
-  //   upload: uploadToFreeimage,
-  // },
-  // {
-  //   id: "filebin",
-  //   name: "Filebin.net",
-  //   maxMB: 100,
-  //   expire: "Indefinite",
-  //   upload: uploadToFilebin,
-  // },
+  {
+    id: "gofile",
+    name: "gofile.io",
+    maxMB: 10240,
+    expire: "10 days",
+    upload: uploadToGofile,
+  },
+  {
+    id: "tmpfiles",
+    name: "tmpfiles.org",
+    maxMB: 100,
+    expire: "60 minutes",
+    upload: uploadToTmpfiles,
+  },
+  {
+    id: "catbox",
+    name: "catbox.moe",
+    maxMB: 200,
+    expire: "Indefinite",
+    upload: uploadToCatbox,
+  },
+  {
+    id: "freeimage",
+    name: "Freeimage.host",
+    maxMB: 64,
+    expire: "Indefinite",
+    upload: uploadToFreeimage,
+  },
+  {
+    id: "filebin",
+    name: "Filebin.net",
+    maxMB: 100,
+    expire: "Indefinite",
+    upload: uploadToFilebin,
+  },
   {
     id: "ufile",
     name: "Ufile.io",
