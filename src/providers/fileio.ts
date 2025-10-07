@@ -18,12 +18,15 @@ export const uploadToFileio = async (
       signal,
     });
 
-    const text = await response.text();
-    let result: FileioResponse;
+    if (!response.ok) {
+      throw new Error(`Erro ao realizar upload: ${response.statusText}`);
+    }
 
+    let result: FileioResponse;
     try {
-      result = JSON.parse(text);
-    } catch {
+      result = await response.json();
+    } catch (err) {
+      const text = await response.text();
       console.error("Resposta inválida da API /api/fileio:", text);
       throw new Error("Resposta inválida da API /api/fileio");
     }
