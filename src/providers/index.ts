@@ -1,9 +1,10 @@
-import { uploadToUfile } from "./ufile";
 // import { uploadToCatbox } from "./catBox";
 // import { uploadToFilebin } from "./filebin";
 // import { uploadToFreeimage } from "./freeimage";
 // import { uploadToGofile } from "./gofile";
 // import { uploadToTmpfiles } from "./tmpfiles";
+
+import { uploadToUfile } from "./ufile";
 
 export interface Provider {
   id: string;
@@ -52,7 +53,7 @@ export const PROVIDERS: Provider[] = [
   {
     id: "ufile",
     name: "Ufile.io",
-    maxMB: 200,
+    maxMB: 5000,
     expire: "Indefinite",
     upload: uploadToUfile,
   },
