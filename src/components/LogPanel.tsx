@@ -15,6 +15,7 @@ export const LogPanel: React.FC<Props> = ({ logs, setLogs }) => {
         clearInterval(interval);
         return;
       }
+      copy.pop();
       setLogs([...copy]);
     }, 150);
   };
