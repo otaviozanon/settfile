@@ -1,18 +1,8 @@
 export interface FreeimageResponse {
-  status_code: number;
-  success?: {
-    message: string;
-    code: number;
-  };
-  image?: {
-    url: string;
-    url_viewer: string;
-    [key: string]: any;
-  };
-  status_txt?: string;
+  success: boolean;
+  url?: string;
+  error?: string;
 }
-
-const API_KEY = "6d207e02198a847aa98d0a2a901485a5";
 
 export const uploadToFreeimage = async (
   file: File,
@@ -22,24 +12,16 @@ export const uploadToFreeimage = async (
   return new Promise((resolve, reject) => {
     try {
       const formData = new FormData();
-      formData.append("key", API_KEY);
-      formData.append("action", "upload");
-      formData.append("source", file);
-      formData.append("format", "json");
+      formData.append("file", file, file.name);
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/freeimage");
 
-      // Support for cancellation
-      if (signal) {
-        signal.addEventListener("abort", () => xhr.abort());
-      }
+      if (signal) signal.addEventListener("abort", () => xhr.abort());
 
-      // Update progress bar
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {
-          const percent = (event.loaded / event.total) * 100;
-          onProgress(percent);
+          onProgress((event.loaded / event.total) * 100);
         }
       };
 
@@ -47,25 +29,25 @@ export const uploadToFreeimage = async (
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const result: FreeimageResponse = JSON.parse(xhr.responseText);
-            if (!result.image || !result.image.url) {
-              return reject(new Error("Upload failed or invalid URL"));
+            if (!result.success || !result.url) {
+              return reject(new Error(result.error || "Upload failed"));
             }
-            resolve(result.image.url);
+            resolve(result.url);
           } catch (err) {
             reject(err);
           }
         } else {
-          reject(new Error(`Error performing upload: ${xhr.statusText}`));
+          reject(new Error(`Erro no upload: ${xhr.statusText}`));
         }
       };
 
-      xhr.onerror = () => reject(new Error("Upload error"));
-      xhr.onabort = () => reject(new Error("Upload canceled"));
+      xhr.onerror = () => reject(new Error("Erro na requisição"));
+      xhr.onabort = () => reject(new Error("Upload cancelado"));
 
       xhr.send(formData);
-    } catch (error) {
-      console.error("Error during Freeimage upload process:", error);
-      reject(error);
+    } catch (err) {
+      console.error("Erro no upload FreeImage:", err);
+      reject(err);
     }
   });
 };
