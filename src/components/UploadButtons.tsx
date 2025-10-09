@@ -9,6 +9,8 @@ interface Props {
   setStatusText: React.Dispatch<React.SetStateAction<string>>;
   addLog: (msg: string) => void;
   currentAttempt: string;
+  clearUpload: () => void;
+  uploadResult: { url: string; expire: string } | null;
 }
 
 export const UploadButtons: React.FC<Props> = ({
@@ -20,6 +22,8 @@ export const UploadButtons: React.FC<Props> = ({
   setStatusText,
   addLog,
   currentAttempt,
+  clearUpload,
+  uploadResult,
 }) => {
   return (
     <div className="upload-buttons">
@@ -33,16 +37,18 @@ export const UploadButtons: React.FC<Props> = ({
       <button
         className="cs-btn cancel-btn"
         onClick={() => {
-          if (abortControllerRef.current) {
+          if (uploadResult) {
+            clearUpload();
+          } else if (abortControllerRef.current) {
             abortControllerRef.current.abort();
             setUploading(false);
             setStatusText("Upload canceled.");
             addLog("Upload canceled by user.");
           }
         }}
-        disabled={!uploading}
+        disabled={!uploading && !uploadResult}
       >
-        Cancel
+        {uploadResult ? "Clear" : "Cancel"}
       </button>
       <div className="attempt-info">
         Attempt: <span>{currentAttempt}</span>

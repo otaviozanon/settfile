@@ -31,6 +31,15 @@ function App() {
     setLogs((prev) => [`[${timestamp}] ${message}`, ...prev].slice(0, 50));
   };
 
+  const clearUpload = () => {
+    setSelectedFile(null);
+    setUploadResult(null);
+    setProgress(0);
+    setCurrentAttempt("-");
+    setStatusText("Ready.");
+    addLog("Upload cleared.");
+  };
+
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
@@ -53,24 +62,6 @@ function App() {
     setDragActive(false);
     const file = e.dataTransfer.files[0];
     if (file) handleFileSelect(file);
-  };
-
-  const uploadWithProgress = async (
-    file: File,
-    provider: (typeof PROVIDERS)[0],
-    signal: AbortSignal,
-    onProgress: (p: number) => void
-  ): Promise<string> => {
-    if (!provider.upload) throw new Error("Provider not implemented");
-    onProgress(0);
-    try {
-      const url = await provider.upload(file, signal, onProgress);
-      onProgress(100);
-      return url;
-    } catch (err) {
-      onProgress(0);
-      throw err;
-    }
   };
 
   const handleUpload = async () => {
@@ -166,6 +157,8 @@ function App() {
         setStatusText={setStatusText}
         addLog={addLog}
         currentAttempt={currentAttempt}
+        clearUpload={clearUpload}
+        uploadResult={uploadResult}
       />
 
       <ProgressBar progress={progress} />
