@@ -11,6 +11,7 @@ interface Props {
   currentAttempt: string;
   clearUpload: () => void;
   uploadResult: { url: string; expire: string } | null;
+  handleUploadAnotherHost?: () => void;
 }
 
 export const UploadButtons: React.FC<Props> = ({
@@ -24,6 +25,7 @@ export const UploadButtons: React.FC<Props> = ({
   currentAttempt,
   clearUpload,
   uploadResult,
+  handleUploadAnotherHost,
 }) => {
   return (
     <div className="upload-buttons">
@@ -34,6 +36,7 @@ export const UploadButtons: React.FC<Props> = ({
       >
         {uploading ? "Uploading..." : "Upload"}
       </button>
+
       <button
         className="cs-btn cancel-btn"
         onClick={() => {
@@ -50,6 +53,17 @@ export const UploadButtons: React.FC<Props> = ({
       >
         {uploadResult ? "Clear" : "Cancel"}
       </button>
+
+      {uploadResult && handleUploadAnotherHost && (
+        <button
+          className="cs-btn alt-host-btn"
+          onClick={handleUploadAnotherHost}
+          disabled={uploading}
+        >
+          Swap Host
+        </button>
+      )}
+
       <div className="attempt-info">
         Attempt: <span>{currentAttempt}</span>
       </div>

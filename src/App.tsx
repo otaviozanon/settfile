@@ -22,6 +22,7 @@ function App() {
   const [dragActive, setDragActive] = useState(false);
   const [statusText, setStatusText] = useState("Ready.");
   const [currentAttempt, setCurrentAttempt] = useState("-");
+  const [triedProviders, setTriedProviders] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const itemsPerPage = 5;
@@ -37,6 +38,7 @@ function App() {
     setProgress(0);
     setCurrentAttempt("-");
     setStatusText("Ready.");
+    setTriedProviders(new Set());
     addLog("Upload cleared.");
   };
 
@@ -54,6 +56,7 @@ function App() {
     setProgress(0);
     setStatusText("File selected.");
     setCurrentAttempt("-");
+    setTriedProviders(new Set());
     addLog(`File selected: ${file.name} (${formatFileSize(file.size)})`);
   };
 
@@ -74,8 +77,15 @@ function App() {
 
     const fileSizeMB = selectedFile.size / (1024 * 1024);
     const compatibleProviders = PROVIDERS.filter(
-      (p) => p.maxMB >= fileSizeMB
+      (p) => p.maxMB >= fileSizeMB && !triedProviders.has(p.id)
     ).sort((a, b) => a.maxMB - b.maxMB);
+
+    if (compatibleProviders.length === 0) {
+      addLog("No remaining providers available for upload.");
+      setStatusText("No remaining providers to try.");
+      setUploading(false);
+      return;
+    }
 
     addLog(`Starting upload: ${selectedFile.name}...`);
     setStatusText("Uploading file...");
@@ -92,6 +102,7 @@ function App() {
       try {
         if (!provider.upload) {
           addLog(`✗ Provider ${provider.name} not implemented`);
+          setTriedProviders((prev) => new Set([...prev, provider.id]));
           continue;
         }
 
@@ -106,17 +117,28 @@ function App() {
         setStatusText(`Success! File uploaded to ${provider.name}`);
         setUploading(false);
         setProgress(100);
+        setTriedProviders((prev) => new Set([...prev, provider.id]));
         return;
       } catch (err) {
         addLog(`✗ Failed on ${provider.name}: ${(err as Error).message}`);
+        setTriedProviders((prev) => new Set([...prev, provider.id]));
         setProgress(0);
       }
     }
 
-    setStatusText("Error: all providers failed.");
-    addLog("All providers failed.");
+    setStatusText("Error: all remaining providers failed.");
+    addLog("All remaining providers failed.");
     setUploading(false);
     setCurrentAttempt("-");
+  };
+
+  const handleUploadAnotherHost = async () => {
+    if (!selectedFile) return;
+    setUploadResult(null);
+    setProgress(0);
+    setStatusText("Trying another host...");
+    addLog("Reuploading file to another available host...");
+    await handleUpload();
   };
 
   const paginatedProviders = PROVIDERS.slice(
@@ -159,6 +181,7 @@ function App() {
         currentAttempt={currentAttempt}
         clearUpload={clearUpload}
         uploadResult={uploadResult}
+        handleUploadAnotherHost={handleUploadAnotherHost}
       />
 
       <ProgressBar progress={progress} />
