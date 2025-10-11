@@ -7,20 +7,28 @@ export interface SafeNoteResponse {
 export const uploadToSafeNote = async (
   file: File,
   signal?: AbortSignal,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  lifetime = 72,
+  read_count = 10,
+  password = ""
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     try {
       const formData = new FormData();
       formData.append("file", file, file.name);
+      formData.append("lifetime", lifetime.toString());
+      formData.append("read_count", read_count.toString());
+      formData.append("password", password);
 
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/safenote");
+      xhr.open("POST", "https://safenote.co/api/file");
 
+      // Support for cancellation
       if (signal) {
         signal.addEventListener("abort", () => xhr.abort());
       }
 
+      // Track upload progress
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {
           const percent = (event.loaded / event.total) * 100;
@@ -48,10 +56,10 @@ export const uploadToSafeNote = async (
 
       xhr.onerror = () => reject(new Error("Upload error"));
       xhr.onabort = () => reject(new Error("Upload canceled"));
+
       xhr.send(formData);
-    } catch (error) {
-      console.error("Error during SafeNote upload process:", error);
-      reject(error);
+    } catch (err) {
+      reject(err);
     }
   });
 };
