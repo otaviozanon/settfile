@@ -1,6 +1,6 @@
 export interface SafeNoteResponse {
   success: boolean;
-  url?: string;
+  link?: string;
   error?: string;
 }
 
@@ -23,12 +23,10 @@ export const uploadToSafeNote = async (
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "https://safenote.co/api/file");
 
-      // Support for cancellation
       if (signal) {
         signal.addEventListener("abort", () => xhr.abort());
       }
 
-      // Track upload progress
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {
           const percent = (event.loaded / event.total) * 100;
@@ -40,12 +38,12 @@ export const uploadToSafeNote = async (
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const result: SafeNoteResponse = JSON.parse(xhr.responseText);
-            if (!result.success || !result.url) {
+            if (!result.success || !result.link) {
               return reject(
                 new Error(result.error || "SafeNote upload failed")
               );
             }
-            resolve(result.url);
+            resolve(result.link);
           } catch (err) {
             reject(err);
           }
