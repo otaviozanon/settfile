@@ -1,6 +1,6 @@
 export interface SafeNoteResponse {
   success: boolean;
-  link?: string;
+  url?: string;
   error?: string;
 }
 
@@ -21,7 +21,8 @@ export const uploadToSafeNote = async (
       formData.append("password", password);
 
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", "https://safenote.co/api/file");
+      // ✅ Usa o seu endpoint local para evitar CORS
+      xhr.open("POST", "/api/safenote");
 
       if (signal) {
         signal.addEventListener("abort", () => xhr.abort());
@@ -38,12 +39,12 @@ export const uploadToSafeNote = async (
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const result: SafeNoteResponse = JSON.parse(xhr.responseText);
-            if (!result.success || !result.link) {
+            if (!result.success || !result.url) {
               return reject(
                 new Error(result.error || "SafeNote upload failed")
               );
             }
-            resolve(result.link);
+            resolve(result.url);
           } catch (err) {
             reject(err);
           }
