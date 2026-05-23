@@ -9,6 +9,7 @@ import { Pagination } from "./components/Pagination";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useLogger } from "./hooks/useLogger";
+import type { LogEntry } from "./hooks/useLogger";
 import { formatFileSize } from "./utils/validation";
 import "./App.css";
 import { Download } from "lucide-react";
@@ -31,7 +32,7 @@ function App() {
     retryWithAnotherProvider,
     abortControllerRef,
   } = useFileUpload({
-    onLog: (message) => addLog(message, "info"),
+    onLog: (message, level) => addLog(message, level as LogEntry["level"] || "info"),
     onSuccess: (result) => {
       addLog(`Upload successful: ${result.url}`, "success");
     },
