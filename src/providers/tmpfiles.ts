@@ -2,11 +2,8 @@ import { createXHRUpload, createFileFormData } from "./base";
 import { UploadError, ErrorCode } from "../types/errors";
 
 export interface TmpfilesResponse {
-  status: boolean;
-  data: {
-    url: string;
-    [key: string]: any;
-  };
+  success: boolean;
+  url?: string;
   error?: string;
 }
 
@@ -18,7 +15,7 @@ export const uploadToTmpfiles = async (
   const formData = createFileFormData(file, "file");
 
   const result = await createXHRUpload<TmpfilesResponse>({
-    url: "https://tmpfiles.org/api/v1/upload",
+    url: "/api/tmpfiles",
     formData,
     signal,
     onProgress,
@@ -36,7 +33,7 @@ export const uploadToTmpfiles = async (
     );
   }
 
-  if (!response.status) {
+  if (!response.success || !response.url) {
     throw new UploadError(
       ErrorCode.PROVIDER_ERROR,
       response.error || "Upload failed",
@@ -44,5 +41,5 @@ export const uploadToTmpfiles = async (
     );
   }
 
-  return response.data.url;
+  return response.url;
 };

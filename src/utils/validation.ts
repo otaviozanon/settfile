@@ -1,4 +1,4 @@
-import { ValidationError, ValidationErrorDetail, ErrorCode } from '../types/errors';
+import { ValidationErrorDetail } from '../types/errors';
 
 /**
  * File validation utilities
@@ -6,43 +6,6 @@ import { ValidationError, ValidationErrorDetail, ErrorCode } from '../types/erro
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024; // 10 GB
 const MIN_FILE_SIZE = 1; // 1 byte
-
-// Common MIME types for uploads
-const ALLOWED_MIME_TYPES = new Set([
-  // Images
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-  
-  // Documents
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  
-  // Archives
-  'application/zip',
-  'application/x-rar-compressed',
-  'application/x-7z-compressed',
-  
-  // Text
-  'text/plain',
-  'text/csv',
-  'application/json',
-  
-  // Video
-  'video/mp4',
-  'video/webm',
-  'video/ogg',
-  
-  // Audio
-  'audio/mpeg',
-  'audio/ogg',
-  'audio/wav',
-]);
 
 export interface FileValidationOptions {
   maxSize?: number;

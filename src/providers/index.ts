@@ -6,8 +6,6 @@ import { uploadToSafeNote } from "./safenote";
 import { uploadToTmpfiles } from "./tmpfiles";
 import { uploadToUfile } from "./ufile";
 import { uploadToPixeldrain } from "./pixeldrain";
-import { uploadToAnonfiles } from "./anonfiles";
-import { uploadToTransfersh } from "./transfersh";
 import { uploadToLitterbox } from "./litterbox";
 
 export interface Provider {
@@ -86,18 +84,5 @@ export const PROVIDERS: Provider[] = [
     expire: "7 days",
     upload: uploadToGofile,
   },
-  {
-    id: "transfersh",
-    name: "Transfer.sh",
-    maxMB: 10240, // 10 GB
-    expire: "14 days",
-    upload: uploadToTransfersh,
-  },
-  {
-    id: "anonfiles",
-    name: "AnonFiles",
-    maxMB: 20480, // 20 GB
-    expire: "Indefinite",
-    upload: uploadToAnonfiles,
-  },
+
 ];

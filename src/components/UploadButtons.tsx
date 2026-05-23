@@ -18,14 +18,14 @@ export const UploadButtons = React.memo<Props>(
     uploading,
     selectedFile,
     handleUpload,
-    abortControllerRef,
     handleCancel,
     currentAttempt,
     clearUpload,
     uploadResult,
     handleUploadAnotherHost,
   }) => {
-    const handleCancelClick = () => {
+
+  const handleCancelClick = () => {
       if (uploadResult) {
         clearUpload();
       } else {

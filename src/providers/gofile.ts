@@ -2,12 +2,9 @@ import { createXHRUpload, createFileFormData } from "./base";
 import { UploadError, ErrorCode } from "../types/errors";
 
 export interface GofileResponse {
-  status: string;
-  data: {
-    downloadPage: string;
-    [key: string]: any;
-  };
-  message?: string;
+  success: boolean;
+  url?: string;
+  error?: string;
 }
 
 export const uploadToGofile = async (
@@ -18,11 +15,11 @@ export const uploadToGofile = async (
   const formData = createFileFormData(file, "file");
 
   const result = await createXHRUpload<GofileResponse>({
-    url: "https://upload.gofile.io/uploadFile",
+    url: "/api/gofile",
     formData,
     signal,
     onProgress,
-    timeout: 60000, // 60s for large files
+    timeout: 60000,
     providerName: "gofile.io",
   });
 
@@ -36,13 +33,13 @@ export const uploadToGofile = async (
     );
   }
 
-  if (response.status !== "ok") {
+  if (!response.success || !response.url) {
     throw new UploadError(
       ErrorCode.PROVIDER_ERROR,
-      response.message || "Upload failed",
+      response.error || "Upload failed",
       "gofile.io",
     );
   }
 
-  return response.data.downloadPage;
+  return response.url;
 };

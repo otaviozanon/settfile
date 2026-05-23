@@ -1,25 +1,25 @@
 import { createXHRUpload, createFileFormData } from "./base";
 import { UploadError, ErrorCode } from "../types/errors";
 
-/**
- * Litterbox - Temporary file hosting (same team as Catbox)
- * Up to 1GB per file
- * Configurable expiration: 1h, 12h, 24h, 72h
- * API: https://litterbox.catbox.moe
- */
+export interface LitterboxResponse {
+  success: boolean;
+  url?: string;
+  error?: string;
+}
+
 export const uploadToLitterbox = async (
   file: File,
   signal?: AbortSignal,
   onProgress?: (percent: number) => void,
   expiration: "1h" | "12h" | "24h" | "72h" = "24h",
 ): Promise<string> => {
-  const formData = createFileFormData(file, "fileToUpload", {
+  const formData = createFileFormData(file, "file", {
     reqtype: "fileupload",
     time: expiration,
   });
 
-  const result = await createXHRUpload({
-    url: "https://litterbox.catbox.moe/resources/internals/api.php",
+  const result = await createXHRUpload<LitterboxResponse>({
+    url: "/api/litterbox",
     formData,
     signal,
     onProgress,
@@ -27,16 +27,23 @@ export const uploadToLitterbox = async (
     providerName: "litterbox.catbox.moe",
   });
 
-  // Litterbox returns plain text URL
-  const url = result.responseText.trim();
+  const response = result.responseJSON;
 
-  if (!url || !url.startsWith("https://")) {
+  if (!response) {
     throw new UploadError(
       ErrorCode.INVALID_RESPONSE,
-      "Invalid URL from server",
+      "Empty response from server",
       "litterbox.catbox.moe",
     );
   }
 
-  return url;
+  if (!response.success || !response.url) {
+    throw new UploadError(
+      ErrorCode.PROVIDER_ERROR,
+      response.error || "Upload failed",
+      "litterbox.catbox.moe",
+    );
+  }
+
+  return response.url;
 };

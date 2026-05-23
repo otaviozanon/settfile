@@ -1,5 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AppError, ErrorCode } from '../types/errors';
+import { Component, ErrorInfo, ReactNode } from 'react';
+import { AppError } from '../types/errors';
 
 interface Props {
   children: ReactNode;

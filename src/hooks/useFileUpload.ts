@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { PROVIDERS, Provider } from '../providers';
+import { PROVIDERS } from '../providers';
 import { formatFileSize } from '../utils/validation';
 
 export interface UploadResult {

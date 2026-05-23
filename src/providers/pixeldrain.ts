@@ -3,15 +3,10 @@ import { UploadError, ErrorCode } from "../types/errors";
 
 export interface PixeldrainResponse {
   success: boolean;
-  id?: string;
+  url?: string;
   error?: string;
 }
 
-/**
- * Pixeldrain - Free file hosting up to 10GB
- * Files expire after 90 days of inactivity
- * API: https://pixeldrain.com/api
- */
 export const uploadToPixeldrain = async (
   file: File,
   signal?: AbortSignal,
@@ -20,15 +15,14 @@ export const uploadToPixeldrain = async (
   const formData = createFileFormData(file, "file");
 
   const result = await createXHRUpload<PixeldrainResponse>({
-    url: "https://pixeldrain.com/api/file",
+    url: "/api/pixeldrain",
     formData,
     signal,
     onProgress,
-    timeout: 120000, // 2 minutes for large files
+    timeout: 120000,
     providerName: "pixeldrain.com",
   });
 
-  // Pixeldrain returns JSON with id
   const response = result.responseJSON;
 
   if (!response) {
@@ -39,7 +33,7 @@ export const uploadToPixeldrain = async (
     );
   }
 
-  if (!response.success || !response.id) {
+  if (!response.success || !response.url) {
     throw new UploadError(
       ErrorCode.PROVIDER_ERROR,
       response.error || "Upload failed",
@@ -47,5 +41,5 @@ export const uploadToPixeldrain = async (
     );
   }
 
-  return `https://pixeldrain.com/u/${response.id}`;
+  return response.url;
 };
