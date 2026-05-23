@@ -41,7 +41,6 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse) {
     "/api/freeimage": "./api/freeimage.ts",
     "/api/gofile": "./api/gofile.ts",
     "/api/litterbox": "./api/litterbox.ts",
-    "/api/pixeldrain": "./api/pixeldrain.ts",
     "/api/safenote": "./api/safenote.ts",
     "/api/tmpfiles": "./api/tmpfiles.ts",
     "/api/ufile": "./api/ufile.ts",

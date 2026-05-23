@@ -5,7 +5,6 @@ import { uploadToGofile } from "./gofile";
 import { uploadToSafeNote } from "./safenote";
 import { uploadToTmpfiles } from "./tmpfiles";
 import { uploadToUfile } from "./ufile";
-import { uploadToPixeldrain } from "./pixeldrain";
 import { uploadToLitterbox } from "./litterbox";
 
 export interface Provider {
@@ -69,13 +68,6 @@ export const PROVIDERS: Provider[] = [
     maxMB: 5120, // 5 GB
     expire: "Indefinite",
     upload: uploadToUfile,
-  },
-  {
-    id: "pixeldrain",
-    name: "Pixeldrain",
-    maxMB: 10240, // 10 GB
-    expire: "90 days",
-    upload: uploadToPixeldrain,
   },
   {
     id: "gofile",
