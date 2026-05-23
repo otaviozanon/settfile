@@ -129,10 +129,17 @@ export function createXHRUpload<TResponse = any>(
             ),
           );
         } else {
+          let detail = xhr.statusText || "";
+          try {
+            const errJson = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+            if (errJson?.detail) detail = errJson.detail;
+            else if (errJson?.error) detail = errJson.error;
+          } catch { /* not JSON */ }
+
           reject(
             new UploadError(
               ErrorCode.NETWORK_ERROR,
-              `HTTP ${xhr.status}: ${xhr.statusText}`,
+              `HTTP ${xhr.status}: ${detail || xhr.statusText}`,
               providerName,
             ),
           );
