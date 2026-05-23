@@ -1,4 +1,4 @@
-# settfile
+# SETTFILE
 
 Multi-provider file upload aggregator with automatic failover. Upload a file once, and it will be hosted on the first available service among 8 supported providers.
 
@@ -30,43 +30,10 @@ Multi-provider file upload aggregator with automatic failover. Upload a file onc
 - **Backend:** Node.js HTTP server (raw `http` module), TypeScript via `tsx`
 - **Proxy architecture** — browser uploads to local server, server forwards to third-party hosts (no direct CORS exposure)
 
-## Getting Started
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server (with HMR)
-npm run dev
-# → http://localhost:3000
-
-# Build for production
-npm run build
-
-# Run production server
-npm start
-```
-
-Set `PORT` in `.env` to change the default port (3000).
-
 ## How It Works
-
-```
-Browser (XHR) → localhost:3000/api/{provider} → Node Server → Third-Party Host
-```
 
 1. User selects a file and optional host
 2. Frontend sends file via XHR to the local Node server
 3. Server forwards the file to the chosen third-party host
 4. Host URL is returned to the frontend
 5. User can swap to another host with one click
-
-## Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start dev server with Vite HMR |
-| `npm run build` | Build frontend for production |
-| `npm start` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Run TypeScript type checking |
