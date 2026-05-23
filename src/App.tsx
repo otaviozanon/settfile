@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { PROVIDERS } from "./providers";
 import { FileDrop } from "./components/FileDrop";
 import { UploadButtons } from "./components/UploadButtons";
@@ -6,214 +6,157 @@ import { ProgressBar } from "./components/ProgressBar";
 import { LogPanel } from "./components/LogPanel";
 import { ProvidersTable } from "./components/ProvidersTable";
 import { Pagination } from "./components/Pagination";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useFileUpload } from "./hooks/useFileUpload";
+import { useLogger } from "./hooks/useLogger";
+import { formatFileSize } from "./utils/validation";
 import "./App.css";
 import { Download } from "lucide-react";
 
 function App() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [uploadResult, setUploadResult] = useState<{
-    url: string;
-    expire: string;
-  } | null>(null);
-  const [logs, setLogs] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [dragActive, setDragActive] = useState(false);
-  const [statusText, setStatusText] = useState("Ready.");
-  const [currentAttempt, setCurrentAttempt] = useState("-");
-  const [triedProviders, setTriedProviders] = useState<Set<string>>(new Set());
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const itemsPerPage = 5;
+  const itemsPerPage = 6; // Show 6 providers per page (11 total = 2 pages)
 
-  const addLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString("en-US", { hour12: false });
-    setLogs((prev) => [`[${timestamp}] ${message}`, ...prev].slice(0, 50));
-  };
+  // Use custom hooks for cleaner state management
+  const { logs, addLog } = useLogger({ maxLogs: 50 });
 
-  const clearUpload = () => {
-    setSelectedFile(null);
-    setUploadResult(null);
-    setProgress(0);
-    setCurrentAttempt("-");
-    setStatusText("Ready.");
-    setTriedProviders(new Set());
-    addLog("Upload cleared.");
-  };
+  const {
+    state: uploadState,
+    selectFile,
+    upload,
+    cancelUpload,
+    clearUpload,
+    retryWithAnotherProvider,
+    abortControllerRef,
+  } = useFileUpload({
+    onLog: (message) => addLog(message, "info"),
+    onSuccess: (result) => {
+      addLog(`Upload successful: ${result.url}`, "success");
+    },
+    onError: (error) => {
+      addLog(`Upload error: ${error.message}`, "error");
+    },
+  });
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  };
+  // Memoize file info to prevent unnecessary re-renders
+  const fileInfo = useMemo(() => {
+    if (!uploadState.selectedFile) return null;
 
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    setUploadResult(null);
-    setProgress(0);
-    setStatusText("File selected.");
-    setCurrentAttempt("-");
-    setTriedProviders(new Set());
-    addLog(`File selected: ${file.name} (${formatFileSize(file.size)})`);
-  };
+    return {
+      name: uploadState.selectedFile.name,
+      size: formatFileSize(uploadState.selectedFile.size),
+      type: uploadState.selectedFile.type || "unknown",
+      extension:
+        uploadState.selectedFile.name.split(".").pop()?.toUpperCase() || "N/A",
+    };
+  }, [uploadState.selectedFile]);
 
-  const handleDrop = (e: React.DragEvent) => {
+  // Memoize handlers to prevent re-creation on every render
+  const handleFileSelect = useCallback(
+    (file: File) => {
+      selectFile(file);
+    },
+    [selectFile],
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragActive(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFileSelect(file);
+    },
+    [handleFileSelect],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
-  };
+  }, []);
 
-  const handleUpload = async () => {
-    if (!selectedFile) return;
+  // Memoize paginated providers
+  const paginatedProviders = useMemo(() => {
+    return PROVIDERS.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage,
+    );
+  }, [currentPage, itemsPerPage]);
 
-    setUploading(true);
-    setProgress(0);
-    setUploadResult(null);
-    abortControllerRef.current = new AbortController();
-
-    const fileSizeMB = selectedFile.size / (1024 * 1024);
-    const compatibleProviders = PROVIDERS.filter(
-      (p) => p.maxMB >= fileSizeMB && !triedProviders.has(p.id)
-    ).sort((a, b) => a.maxMB - b.maxMB);
-
-    if (compatibleProviders.length === 0) {
-      addLog("No remaining providers available for upload.");
-      setStatusText("No remaining providers to try.");
-      setUploading(false);
-      return;
-    }
-
-    addLog(`Starting upload: ${selectedFile.name}...`);
-    setStatusText("Uploading file...");
-
-    let attemptCount = 0;
-
-    for (const provider of compatibleProviders) {
-      if (abortControllerRef.current?.signal.aborted) break;
-
-      attemptCount++;
-      setCurrentAttempt(`${attemptCount}/${compatibleProviders.length}`);
-      addLog(`Trying provider: ${provider.name}...`);
-
-      try {
-        if (!provider.upload) {
-          addLog(`✗ Provider ${provider.name} not implemented`);
-          setTriedProviders((prev) => new Set([...prev, provider.id]));
-          continue;
-        }
-
-        const url = await provider.upload(
-          selectedFile,
-          abortControllerRef.current.signal,
-          setProgress
-        );
-
-        addLog(`✓ Upload completed on ${provider.name}`);
-        setUploadResult({ url, expire: provider.expire });
-        setStatusText(`Success! File uploaded to ${provider.name}`);
-        setUploading(false);
-        setProgress(100);
-        setTriedProviders((prev) => new Set([...prev, provider.id]));
-        return;
-      } catch (err) {
-        addLog(`✗ Failed on ${provider.name}: ${(err as Error).message}`);
-        setTriedProviders((prev) => new Set([...prev, provider.id]));
-        setProgress(0);
-      }
-    }
-
-    setStatusText("Error: all remaining providers failed.");
-    addLog("All remaining providers failed.");
-    setUploading(false);
-    setCurrentAttempt("-");
-  };
-
-  const handleUploadAnotherHost = async () => {
-    if (!selectedFile) return;
-    setUploadResult(null);
-    setProgress(0);
-    setStatusText("Trying another host...");
-    addLog("Reuploading file to another available host...");
-    await handleUpload();
-  };
-
-  const paginatedProviders = PROVIDERS.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-  const totalPages = Math.ceil(PROVIDERS.length / itemsPerPage);
+  const totalPages = useMemo(() => {
+    return Math.ceil(PROVIDERS.length / itemsPerPage);
+  }, [itemsPerPage]);
 
   return (
-    <div className="app-container">
-      <h1>settfile - smart uploader</h1>
+    <ErrorBoundary>
+      <div className="app-container">
+        <h1>settfile - smart uploader</h1>
 
-      <FileDrop
-        dragActive={dragActive}
-        fileInputRef={fileInputRef}
-        handleFileSelect={handleFileSelect}
-        handleDrop={handleDrop}
-      />
+        <FileDrop
+          dragActive={dragActive}
+          handleFileSelect={handleFileSelect}
+          handleDrop={handleDrop}
+          handleDragOver={handleDragOver}
+          handleDragLeave={handleDragLeave}
+        />
 
-      {selectedFile && (
-        <div className="file-info">
-          <span>Name: {selectedFile.name}</span>
-          <span>Size: {formatFileSize(selectedFile.size)}</span>
-          <span>Type: {selectedFile.type || "unknown"}</span>
-          <span>
-            Extension:{" "}
-            {selectedFile.name.split(".").pop()?.toUpperCase() || "N/A"}
-          </span>
-        </div>
-      )}
+        {fileInfo && (
+          <div className="file-info">
+            <span>Name: {fileInfo.name}</span>
+            <span>Size: {fileInfo.size}</span>
+            <span>Type: {fileInfo.type}</span>
+            <span>Extension: {fileInfo.extension}</span>
+          </div>
+        )}
 
-      <UploadButtons
-        uploading={uploading}
-        selectedFile={selectedFile}
-        handleUpload={handleUpload}
-        abortControllerRef={abortControllerRef}
-        setUploading={setUploading}
-        setStatusText={setStatusText}
-        addLog={addLog}
-        currentAttempt={currentAttempt}
-        clearUpload={clearUpload}
-        uploadResult={uploadResult}
-        handleUploadAnotherHost={handleUploadAnotherHost}
-      />
+        <UploadButtons
+          uploading={uploadState.uploading}
+          selectedFile={uploadState.selectedFile}
+          handleUpload={upload}
+          abortControllerRef={abortControllerRef}
+          handleCancel={cancelUpload}
+          currentAttempt={uploadState.currentAttempt}
+          clearUpload={clearUpload}
+          uploadResult={uploadState.uploadResult}
+          handleUploadAnotherHost={retryWithAnotherProvider}
+        />
 
-      <ProgressBar progress={progress} />
-      <div className="status-text">{statusText}</div>
+        <ProgressBar progress={uploadState.progress} />
+        <div className="status-text">{uploadState.statusText}</div>
 
-      {uploadResult && (
-        <div className="download-link">
-          <a
-            href={uploadResult.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="download-button"
-          >
-            <Download size={16} style={{ marginRight: "6px" }} />
-            Download
-            <span className="expire-text">
-              (expires: {uploadResult.expire})
-            </span>
-          </a>
-        </div>
-      )}
+        {uploadState.uploadResult && (
+          <div className="download-link">
+            <a
+              href={uploadState.uploadResult.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="download-button"
+            >
+              <Download size={16} style={{ marginRight: "6px" }} />
+              Download
+              <span className="expire-text">
+                (expires: {uploadState.uploadResult.expire})
+              </span>
+            </a>
+          </div>
+        )}
 
-      <LogPanel logs={logs} onClear={() => setLogs([])} setLogs={setLogs} />
+        <LogPanel logs={logs} />
 
-      <ProvidersTable providers={paginatedProviders} />
+        <ProvidersTable providers={paginatedProviders} />
 
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        setCurrentPage={setCurrentPage}
-      />
-    </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          setCurrentPage={setCurrentPage}
+        />
+      </div>
+    </ErrorBoundary>
   );
 }
 

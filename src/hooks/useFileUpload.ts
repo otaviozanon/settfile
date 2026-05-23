@@ -1,0 +1,231 @@
+import { useState, useRef, useCallback } from 'react';
+import { PROVIDERS, Provider } from '../providers';
+
+export interface UploadResult {
+  url: string;
+  expire: string;
+  provider: string;
+}
+
+export interface UploadState {
+  selectedFile: File | null;
+  uploading: boolean;
+  progress: number;
+  uploadResult: UploadResult | null;
+  currentAttempt: string;
+  statusText: string;
+  triedProviders: Set<string>;
+}
+
+export interface UploadError {
+  code: string;
+  message: string;
+  provider?: string;
+  details?: unknown;
+}
+
+interface UseFileUploadOptions {
+  onLog?: (message: string) => void;
+  onSuccess?: (result: UploadResult) => void;
+  onError?: (error: UploadError) => void;
+}
+
+export function useFileUpload(options: UseFileUploadOptions = {}) {
+  const { onLog, onSuccess, onError } = options;
+
+  const [state, setState] = useState<UploadState>({
+    selectedFile: null,
+    uploading: false,
+    progress: 0,
+    uploadResult: null,
+    currentAttempt: '-',
+    statusText: 'Ready.',
+    triedProviders: new Set(),
+  });
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const log = useCallback((message: string) => {
+    onLog?.(message);
+  }, [onLog]);
+
+  const updateState = useCallback((updates: Partial<UploadState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const selectFile = useCallback((file: File) => {
+    updateState({
+      selectedFile: file,
+      uploadResult: null,
+      progress: 0,
+      statusText: 'File selected.',
+      currentAttempt: '-',
+      triedProviders: new Set(),
+    });
+    log(`File selected: ${file.name} (${formatFileSize(file.size)})`);
+  }, [log, updateState]);
+
+  const clearUpload = useCallback(() => {
+    updateState({
+      selectedFile: null,
+      uploadResult: null,
+      progress: 0,
+      currentAttempt: '-',
+      statusText: 'Ready.',
+      triedProviders: new Set(),
+    });
+    log('Upload cleared.');
+  }, [log, updateState]);
+
+  const cancelUpload = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      updateState({
+        uploading: false,
+        statusText: 'Upload canceled.',
+      });
+      log('Upload canceled by user.');
+    }
+  }, [log, updateState]);
+
+  const upload = useCallback(async () => {
+    if (!state.selectedFile) return;
+
+    updateState({
+      uploading: true,
+      progress: 0,
+      uploadResult: null,
+    });
+
+    abortControllerRef.current = new AbortController();
+
+    const fileSizeMB = state.selectedFile.size / (1024 * 1024);
+    const compatibleProviders = PROVIDERS.filter(
+      (p) => p.maxMB >= fileSizeMB && !state.triedProviders.has(p.id)
+    ).sort((a, b) => a.maxMB - b.maxMB);
+
+    if (compatibleProviders.length === 0) {
+      const error: UploadError = {
+        code: 'no_providers',
+        message: 'No remaining providers available for upload.',
+      };
+      log(error.message);
+      updateState({
+        statusText: 'No remaining providers to try.',
+        uploading: false,
+      });
+      onError?.(error);
+      return;
+    }
+
+    log(`Starting upload: ${state.selectedFile.name}...`);
+    updateState({ statusText: 'Uploading file...' });
+
+    let attemptCount = 0;
+
+    for (const provider of compatibleProviders) {
+      if (abortControllerRef.current?.signal.aborted) break;
+
+      attemptCount++;
+      updateState({
+        currentAttempt: `${attemptCount}/${compatibleProviders.length}`,
+      });
+      log(`Trying provider: ${provider.name}...`);
+
+      try {
+        if (!provider.upload) {
+          log(`✗ Provider ${provider.name} not implemented`);
+          setState(prev => ({
+            ...prev,
+            triedProviders: new Set([...prev.triedProviders, provider.id]),
+          }));
+          continue;
+        }
+
+        const url = await provider.upload(
+          state.selectedFile,
+          abortControllerRef.current.signal,
+          (percent) => updateState({ progress: percent })
+        );
+
+        const result: UploadResult = {
+          url,
+          expire: provider.expire,
+          provider: provider.name,
+        };
+
+        log(`✓ Upload completed on ${provider.name}`);
+        updateState({
+          uploadResult: result,
+          statusText: `Success! File uploaded to ${provider.name}`,
+          uploading: false,
+          progress: 100,
+        });
+
+        setState(prev => ({
+          ...prev,
+          triedProviders: new Set([...prev.triedProviders, provider.id]),
+        }));
+
+        onSuccess?.(result);
+        return;
+      } catch (err) {
+        const error: UploadError = {
+          code: 'upload_failed',
+          message: (err as Error).message,
+          provider: provider.name,
+          details: err,
+        };
+
+        log(`✗ Failed on ${provider.name}: ${error.message}`);
+        setState(prev => ({
+          ...prev,
+          triedProviders: new Set([...prev.triedProviders, provider.id]),
+          progress: 0,
+        }));
+      }
+    }
+
+    const finalError: UploadError = {
+      code: 'all_providers_failed',
+      message: 'All remaining providers failed.',
+    };
+
+    updateState({
+      statusText: `Error: ${finalError.message}`,
+      uploading: false,
+      currentAttempt: '-',
+    });
+    log(finalError.message);
+    onError?.(finalError);
+  }, [state.selectedFile, state.triedProviders, log, updateState, onSuccess, onError]);
+
+  const retryWithAnotherProvider = useCallback(async () => {
+    if (!state.selectedFile) return;
+    updateState({
+      uploadResult: null,
+      progress: 0,
+      statusText: 'Trying another host...',
+    });
+    log('Reuploading file to another available host...');
+    await upload();
+  }, [state.selectedFile, log, updateState, upload]);
+
+  return {
+    state,
+    selectFile,
+    upload,
+    cancelUpload,
+    clearUpload,
+    retryWithAnotherProvider,
+    abortControllerRef,
+  };
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}

@@ -1,33 +1,36 @@
 import { createXHRUpload, createFileFormData } from "./base";
 import { UploadError, ErrorCode } from "../types/errors";
 
-export const uploadToCatbox = async (
+/**
+ * Transfer.sh - Easy file sharing from command line
+ * Up to 10GB per file
+ * Files stored for 14 days
+ * API: https://transfer.sh
+ */
+export const uploadToTransfersh = async (
   file: File,
   signal?: AbortSignal,
   onProgress?: (percent: number) => void,
 ): Promise<string> => {
-  const formData = createFileFormData(file, "fileToUpload", {
-    reqtype: "fileupload",
-    userhash: "",
-  });
+  const formData = createFileFormData(file, file.name);
 
   const result = await createXHRUpload({
-    url: "/api/catbox",
+    url: "https://transfer.sh",
     formData,
     signal,
     onProgress,
-    timeout: 60000,
-    providerName: "catbox.moe",
+    timeout: 120000, // 2 minutes
+    providerName: "transfer.sh",
   });
 
-  // Catbox returns plain text URL
+  // Transfer.sh returns plain text URL
   const url = result.responseText.trim();
 
   if (!url || !url.startsWith("https://")) {
     throw new UploadError(
       ErrorCode.INVALID_RESPONSE,
       "Invalid URL from server",
-      "catbox.moe",
+      "transfer.sh",
     );
   }
 

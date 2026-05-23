@@ -1,45 +1,51 @@
 import { createXHRUpload, createFileFormData } from "./base";
 import { UploadError, ErrorCode } from "../types/errors";
 
-export interface FreeimageResponse {
+export interface PixeldrainResponse {
   success: boolean;
-  url?: string;
+  id?: string;
   error?: string;
 }
 
-export const uploadToFreeimage = async (
+/**
+ * Pixeldrain - Free file hosting up to 10GB
+ * Files expire after 90 days of inactivity
+ * API: https://pixeldrain.com/api
+ */
+export const uploadToPixeldrain = async (
   file: File,
   signal?: AbortSignal,
   onProgress?: (percent: number) => void,
 ): Promise<string> => {
   const formData = createFileFormData(file, "file");
 
-  const result = await createXHRUpload<FreeimageResponse>({
-    url: "/api/freeimage",
+  const result = await createXHRUpload<PixeldrainResponse>({
+    url: "https://pixeldrain.com/api/file",
     formData,
     signal,
     onProgress,
-    timeout: 60000,
-    providerName: "freeimage.host",
+    timeout: 120000, // 2 minutes for large files
+    providerName: "pixeldrain.com",
   });
 
+  // Pixeldrain returns JSON with id
   const response = result.responseJSON;
 
   if (!response) {
     throw new UploadError(
       ErrorCode.INVALID_RESPONSE,
       "Empty response from server",
-      "freeimage.host",
+      "pixeldrain.com",
     );
   }
 
-  if (!response.success || !response.url) {
+  if (!response.success || !response.id) {
     throw new UploadError(
       ErrorCode.PROVIDER_ERROR,
       response.error || "Upload failed",
-      "freeimage.host",
+      "pixeldrain.com",
     );
   }
 
-  return response.url;
+  return `https://pixeldrain.com/u/${response.id}`;
 };

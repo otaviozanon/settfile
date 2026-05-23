@@ -1,3 +1,6 @@
+import { createXHRUpload, createFileFormData } from "./base";
+import { UploadError, ErrorCode } from "../types/errors";
+
 export interface SafeNoteResponse {
   success: boolean;
   url?: string;
@@ -10,55 +13,40 @@ export const uploadToSafeNote = async (
   onProgress?: (percent: number) => void,
   lifetime = 72,
   read_count = 10,
-  password = ""
+  password = "",
 ): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file, file.name);
-      formData.append("lifetime", lifetime.toString());
-      formData.append("read_count", read_count.toString());
-      formData.append("password", password);
-
-      const xhr = new XMLHttpRequest();
-      // ✅ Usa o seu endpoint local para evitar CORS
-      xhr.open("POST", "/api/safenote");
-
-      if (signal) {
-        signal.addEventListener("abort", () => xhr.abort());
-      }
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable && onProgress) {
-          const percent = (event.loaded / event.total) * 100;
-          onProgress(percent);
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const result: SafeNoteResponse = JSON.parse(xhr.responseText);
-            if (!result.success || !result.url) {
-              return reject(
-                new Error(result.error || "SafeNote upload failed")
-              );
-            }
-            resolve(result.url);
-          } catch (err) {
-            reject(err);
-          }
-        } else {
-          reject(new Error(`Error performing upload: ${xhr.statusText}`));
-        }
-      };
-
-      xhr.onerror = () => reject(new Error("Upload error"));
-      xhr.onabort = () => reject(new Error("Upload canceled"));
-
-      xhr.send(formData);
-    } catch (err) {
-      reject(err);
-    }
+  const formData = createFileFormData(file, "file", {
+    lifetime: lifetime.toString(),
+    read_count: read_count.toString(),
+    password,
   });
+
+  const result = await createXHRUpload<SafeNoteResponse>({
+    url: "/api/safenote",
+    formData,
+    signal,
+    onProgress,
+    timeout: 60000,
+    providerName: "safenote.co",
+  });
+
+  const response = result.responseJSON;
+
+  if (!response) {
+    throw new UploadError(
+      ErrorCode.INVALID_RESPONSE,
+      "Empty response from server",
+      "safenote.co",
+    );
+  }
+
+  if (!response.success || !response.url) {
+    throw new UploadError(
+      ErrorCode.PROVIDER_ERROR,
+      response.error || "Upload failed",
+      "safenote.co",
+    );
+  }
+
+  return response.url;
 };

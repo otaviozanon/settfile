@@ -1,72 +1,73 @@
 import React from "react";
+import { UploadResult } from "../hooks/useFileUpload";
 
 interface Props {
   uploading: boolean;
   selectedFile: File | null;
   handleUpload: () => void;
   abortControllerRef: React.MutableRefObject<AbortController | null>;
-  setUploading: React.Dispatch<React.SetStateAction<boolean>>;
-  setStatusText: React.Dispatch<React.SetStateAction<string>>;
-  addLog: (msg: string) => void;
+  handleCancel: () => void;
   currentAttempt: string;
   clearUpload: () => void;
-  uploadResult: { url: string; expire: string } | null;
+  uploadResult: UploadResult | null;
   handleUploadAnotherHost?: () => void;
 }
 
-export const UploadButtons: React.FC<Props> = ({
-  uploading,
-  selectedFile,
-  handleUpload,
-  abortControllerRef,
-  setUploading,
-  setStatusText,
-  addLog,
-  currentAttempt,
-  clearUpload,
-  uploadResult,
-  handleUploadAnotherHost,
-}) => {
-  return (
-    <div className="upload-buttons">
-      <button
-        className="cs-btn"
-        onClick={handleUpload}
-        disabled={uploading || !selectedFile}
-      >
-        {uploading ? "Uploading..." : "Upload"}
-      </button>
+export const UploadButtons = React.memo<Props>(
+  ({
+    uploading,
+    selectedFile,
+    handleUpload,
+    abortControllerRef,
+    handleCancel,
+    currentAttempt,
+    clearUpload,
+    uploadResult,
+    handleUploadAnotherHost,
+  }) => {
+    const handleCancelClick = () => {
+      if (uploadResult) {
+        clearUpload();
+      } else {
+        handleCancel();
+      }
+    };
 
-      <button
-        className="cs-btn cancel-btn"
-        onClick={() => {
-          if (uploadResult) {
-            clearUpload();
-          } else if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-            setUploading(false);
-            setStatusText("Upload canceled.");
-            addLog("Upload canceled by user.");
-          }
-        }}
-        disabled={!uploading && !uploadResult}
-      >
-        {uploadResult ? "Clear" : "Cancel"}
-      </button>
-
-      {uploadResult && handleUploadAnotherHost && (
+    return (
+      <div className="upload-buttons">
         <button
-          className="cs-btn alt-host-btn"
-          onClick={handleUploadAnotherHost}
-          disabled={uploading}
+          className="cs-btn"
+          onClick={handleUpload}
+          disabled={uploading || !selectedFile}
+          aria-label="Upload file"
         >
-          Swap Host
+          {uploading ? "Uploading..." : "Upload"}
         </button>
-      )}
 
-      <div className="attempt-info">
-        Attempt: <span>{currentAttempt}</span>
+        <button
+          className="cs-btn cancel-btn"
+          onClick={handleCancelClick}
+          disabled={!uploading && !uploadResult}
+          aria-label={uploadResult ? "Clear upload" : "Cancel upload"}
+        >
+          {uploadResult ? "Clear" : "Cancel"}
+        </button>
+
+        {uploadResult && handleUploadAnotherHost && (
+          <button
+            className="cs-btn alt-host-btn"
+            onClick={handleUploadAnotherHost}
+            disabled={uploading}
+            aria-label="Try another provider"
+          >
+            Swap Host
+          </button>
+        )}
+
+        <div className="attempt-info">
+          Attempt: <span>{currentAttempt}</span>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  },
+);

@@ -5,7 +5,11 @@ interface Props {
   providers: Provider[];
 }
 
-export const ProvidersTable: React.FC<Props> = ({ providers }) => {
+const formatSize = (maxMB: number): string => {
+  return maxMB >= 1024 ? `${(maxMB / 1024).toFixed(1)} GB` : `${maxMB} MB`;
+};
+
+export const ProvidersTable = React.memo<Props>(({ providers }) => {
   return (
     <>
       <h2>Available Servers</h2>
@@ -13,24 +17,31 @@ export const ProvidersTable: React.FC<Props> = ({ providers }) => {
         <thead>
           <tr>
             <th>Server</th>
-            <th>Limit</th>
-            <th>Expiration</th>
+            <th>Max Size</th>
+            <th>Retention</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
           {providers.map((provider) => (
             <tr key={provider.id}>
               <td>{provider.name}</td>
-              <td>
-                {provider.maxMB >= 1024
-                  ? `${(provider.maxMB / 1024).toFixed(1)} GB`
-                  : `${provider.maxMB} MB`}
-              </td>
+              <td>{formatSize(provider.maxMB)}</td>
               <td>{provider.expire}</td>
+              <td>
+                <span
+                  style={{
+                    color: provider.upload ? "#0a0" : "#999",
+                    fontSize: "0.9em",
+                  }}
+                >
+                  {provider.upload ? "✓ Ready" : "⏸ Coming soon"}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </>
   );
-};
+});

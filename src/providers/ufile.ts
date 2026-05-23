@@ -1,3 +1,6 @@
+import { createXHRUpload, createFileFormData } from "./base";
+import { UploadError, ErrorCode } from "../types/errors";
+
 export interface UfileResponse {
   success: boolean;
   url?: string;
@@ -7,52 +10,36 @@ export interface UfileResponse {
 export const uploadToUfile = async (
   file: File,
   signal?: AbortSignal,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
 ): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file, file.name);
+  const formData = createFileFormData(file, "file");
 
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/ufile");
-
-      // Support for cancellation
-      if (signal) {
-        signal.addEventListener("abort", () => xhr.abort());
-      }
-
-      // Update progress bar
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable && onProgress) {
-          const percent = (event.loaded / event.total) * 100;
-          onProgress(percent);
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const data: UfileResponse = JSON.parse(xhr.responseText);
-            if (!data.success || !data.url) {
-              return reject(new Error(data.error || "Ufile upload failed"));
-            }
-            resolve(data.url);
-          } catch (err) {
-            reject(err);
-          }
-        } else {
-          reject(new Error(`Error performing upload: ${xhr.statusText}`));
-        }
-      };
-
-      xhr.onerror = () => reject(new Error("Upload error"));
-      xhr.onabort = () => reject(new Error("Upload canceled"));
-
-      xhr.send(formData);
-    } catch (err) {
-      console.error("Error during Ufile upload process:", err);
-      reject(err);
-    }
+  const result = await createXHRUpload<UfileResponse>({
+    url: "/api/ufile",
+    formData,
+    signal,
+    onProgress,
+    timeout: 120000, // 2 minutes for large files (up to 5GB)
+    providerName: "ufile.io",
   });
+
+  const response = result.responseJSON;
+
+  if (!response) {
+    throw new UploadError(
+      ErrorCode.INVALID_RESPONSE,
+      "Empty response from server",
+      "ufile.io",
+    );
+  }
+
+  if (!response.success || !response.url) {
+    throw new UploadError(
+      ErrorCode.PROVIDER_ERROR,
+      response.error || "Upload failed",
+      "ufile.io",
+    );
+  }
+
+  return response.url;
 };
