@@ -56,8 +56,6 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     setState(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const VERCEL_BODY_LIMIT = 4.5 * 1024 * 1024;
-
   const selectFile = useCallback((file: File) => {
     updateState({
       selectedFile: file,
@@ -68,14 +66,6 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       triedProviders: new Set(),
     });
     log(`File selected: ${file.name} (${formatFileSize(file.size)})`);
-
-    if (file.size > VERCEL_BODY_LIMIT) {
-      const limitStr = formatFileSize(VERCEL_BODY_LIMIT);
-      log(`WARNING: File (${formatFileSize(file.size)}) exceeds Vercel body limit (${limitStr}). Upload will fail with 413. Upgrade to Vercel Pro/Enterprise or use a smaller file.`);
-      updateState({
-        statusText: `File too large (${formatFileSize(file.size)}) - Vercel limit is ${limitStr}`,
-      });
-    }
   }, [log, updateState]);
 
   const setSelectedProviderId = useCallback((id: string | null) => {
@@ -113,16 +103,6 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
   const upload = useCallback(async () => {
     if (!state.selectedFile) return;
-
-    if (state.selectedFile.size > VERCEL_BODY_LIMIT) {
-      const limitStr = formatFileSize(VERCEL_BODY_LIMIT);
-      log(`Upload blocked: file size (${formatFileSize(state.selectedFile.size)}) exceeds Vercel limit (${limitStr}).`);
-      updateState({
-        statusText: `ERROR: File too large. Vercel free plan limits uploads to ${limitStr}.`,
-        uploading: false,
-      });
-      return;
-    }
 
     updateState({
       uploading: true,
