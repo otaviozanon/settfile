@@ -19,11 +19,12 @@ function App() {
   const itemsPerPage = 6; // Show 6 providers per page (11 total = 2 pages)
 
   // Use custom hooks for cleaner state management
-  const { logs, addLog } = useLogger({ maxLogs: 50 });
+  const { logs, addLog, clearLogsAnimated } = useLogger({ maxLogs: 50 });
 
   const {
     state: uploadState,
     selectFile,
+    setSelectedProviderId,
     upload,
     cancelUpload,
     clearUpload,
@@ -38,6 +39,14 @@ function App() {
       addLog(`Upload error: ${error.message}`, "error");
     },
   });
+
+  const selectedProviderName = useMemo(() => {
+    if (!uploadState.selectedProviderId) return "Auto (Recommended)";
+    return (
+      PROVIDERS.find((p) => p.id === uploadState.selectedProviderId)?.name ||
+      "Unknown"
+    );
+  }, [uploadState.selectedProviderId]);
 
   // Memoize file info to prevent unnecessary re-renders
   const fileInfo = useMemo(() => {
@@ -146,9 +155,17 @@ function App() {
           </div>
         )}
 
-        <LogPanel logs={logs} />
+        <LogPanel logs={logs} onClear={clearLogsAnimated} />
 
-        <ProvidersTable providers={paginatedProviders} />
+        <div className="selected-host-info">
+          Target Host: <strong>{selectedProviderName}</strong>
+        </div>
+
+        <ProvidersTable
+          providers={paginatedProviders}
+          selectedProviderId={uploadState.selectedProviderId}
+          onSelectProvider={setSelectedProviderId}
+        />
 
         <Pagination
           currentPage={currentPage}

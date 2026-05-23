@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { PROVIDERS, Provider } from '../providers';
+import { formatFileSize } from '../utils/validation';
 
 export interface UploadResult {
   url: string;
@@ -15,6 +16,7 @@ export interface UploadState {
   currentAttempt: string;
   statusText: string;
   triedProviders: Set<string>;
+  selectedProviderId: string | null;
 }
 
 export interface UploadError {
@@ -41,6 +43,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     currentAttempt: '-',
     statusText: 'Ready.',
     triedProviders: new Set(),
+    selectedProviderId: null,
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -63,6 +66,16 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       triedProviders: new Set(),
     });
     log(`File selected: ${file.name} (${formatFileSize(file.size)})`);
+  }, [log, updateState]);
+
+  const setSelectedProviderId = useCallback((id: string | null) => {
+    updateState({ selectedProviderId: id });
+    if (id) {
+      const provider = PROVIDERS.find(p => p.id === id);
+      log(`Selected host: ${provider?.name || id}`);
+    } else {
+      log('Automatic host selection enabled.');
+    }
   }, [log, updateState]);
 
   const clearUpload = useCallback(() => {
@@ -100,9 +113,33 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     abortControllerRef.current = new AbortController();
 
     const fileSizeMB = state.selectedFile.size / (1024 * 1024);
-    const compatibleProviders = PROVIDERS.filter(
+    
+    // Filter compatible providers
+    let compatibleProviders = PROVIDERS.filter(
       (p) => p.maxMB >= fileSizeMB && !state.triedProviders.has(p.id)
-    ).sort((a, b) => a.maxMB - b.maxMB);
+    );
+
+    // If a provider is selected, put it at the front of the list if compatible
+    if (state.selectedProviderId) {
+      const selectedIndex = compatibleProviders.findIndex(p => p.id === state.selectedProviderId);
+      if (selectedIndex !== -1) {
+        const [selected] = compatibleProviders.splice(selectedIndex, 1);
+        compatibleProviders = [selected, ...compatibleProviders.sort((a, b) => a.maxMB - b.maxMB)];
+      } else {
+        // Selected provider not compatible or already tried, continue with others sorted
+        compatibleProviders = compatibleProviders.sort((a, b) => a.maxMB - b.maxMB);
+        const selected = PROVIDERS.find(p => p.id === state.selectedProviderId);
+        if (selected) {
+          if (state.triedProviders.has(selected.id)) {
+             log(`Note: Selected host ${selected.name} already tried, falling back to others.`);
+          } else if (selected.maxMB < fileSizeMB) {
+             log(`Note: Selected host ${selected.name} does not support file size, falling back to others.`);
+          }
+        }
+      }
+    } else {
+      compatibleProviders = compatibleProviders.sort((a, b) => a.maxMB - b.maxMB);
+    }
 
     if (compatibleProviders.length === 0) {
       const error: UploadError = {
@@ -198,7 +235,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     });
     log(finalError.message);
     onError?.(finalError);
-  }, [state.selectedFile, state.triedProviders, log, updateState, onSuccess, onError]);
+  }, [state.selectedFile, state.triedProviders, state.selectedProviderId, log, updateState, onSuccess, onError]);
 
   const retryWithAnotherProvider = useCallback(async () => {
     if (!state.selectedFile) return;
@@ -214,18 +251,11 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   return {
     state,
     selectFile,
+    setSelectedProviderId,
     upload,
     cancelUpload,
     clearUpload,
     retryWithAnotherProvider,
     abortControllerRef,
   };
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }

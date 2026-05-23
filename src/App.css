@@ -123,13 +123,29 @@
   border: none;
   cursor: pointer;
   color: #888;
-  padding: 2px;
-  margin-left: auto;
+  padding: 4px;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
 }
 
-.clear-logs-btn:hover {
-  color: #000;
+.clear-logs-btn:hover:not(:disabled) {
+  background: #333;
+  color: var(--accent);
+}
+
+.clear-logs-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.log-title {
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Provider Table */
@@ -158,3 +174,39 @@
 .pagination .cs-btn {
   margin: 0 4px;
 }
+
+.selected-host-info {
+  margin: 15px 0 5px;
+  font-size: 13px;
+  color: #cfeecf;
+  text-align: left;
+  padding: 8px 12px;
+  background: #2e332e;
+  border-radius: 4px;
+  border-left: 4px solid var(--accent);
+}
+
+.selected-row {
+  transition: background-color 0.2s ease;
+  background-color: rgba(127, 255, 127, 0.05);
+}
+
+.select-host-button {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  border: 1px solid var(--muted);
+  background: #2e332e;
+  color: #fff;
+}
+
+.select-host-button:hover {
+  border-color: var(--accent);
+  background: #394039;
+}
+
+.select-host-button.active {
+  background: var(--accent) !important;
+  color: #000 !important;
+  border-color: var(--accent) !important;
+}
+

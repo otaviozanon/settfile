@@ -38,17 +38,26 @@ export function useLogger(options: UseLoggerOptions = {}) {
     setLogs([]);
   }, []);
 
-  const clearLogsAnimated = useCallback((delay: number = 150) => {
-    const copy = [...logs];
-    const interval = setInterval(() => {
-      if (copy.length === 0) {
-        clearInterval(interval);
-        return;
-      }
-      copy.pop();
-      setLogs([...copy]);
-    }, delay);
-  }, [logs]);
+  const clearLogsAnimated = useCallback(async (delay: number = 30) => {
+    // We need to work with the current logs at the moment of call
+    setLogs((currentLogs) => {
+      const copy = [...currentLogs];
+      
+      const removeOne = () => {
+        if (copy.length === 0) return;
+        
+        copy.pop(); // Remove from bottom (oldest)
+        setLogs([...copy]);
+        
+        if (copy.length > 0) {
+          setTimeout(removeOne, delay);
+        }
+      };
+      
+      setTimeout(removeOne, delay);
+      return currentLogs;
+    });
+  }, []);
 
   return {
     logs,
