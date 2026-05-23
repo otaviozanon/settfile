@@ -20,13 +20,14 @@ export default async function handler(
   }
 
   try {
-    // Parse multipart/form-data
     const form = formidable({ multiples: false });
     const [fields, files] = await new Promise<[any, Files]>(
       (resolve, reject) => {
         form.parse(req, (err, fields, files) => {
-          if (err) reject(err);
-          else resolve([fields, files]);
+          if (err) {
+            console.error("SafeNote: formidable parse error:", err);
+            reject(err);
+          } else resolve([fields, files]);
         });
       }
     );
@@ -36,6 +37,7 @@ export default async function handler(
       : (files as any).file;
 
     if (!file) {
+      console.error("SafeNote: no file in request. Available fields:", Object.keys(files as any));
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ success: false, error: "No file provided" }));
@@ -44,28 +46,26 @@ export default async function handler(
 
     const fileBuffer = await fs.promises.readFile(file.filepath);
     if (!fileBuffer || fileBuffer.length === 0) {
+      console.error("SafeNote: empty file buffer");
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ success: false, error: "Empty file" }));
       return;
     }
 
-    // Optional parameters
-    const lifetime = fields.lifetime || 72; // hours
-    const read_count = fields.read_count || 10;
-    const password = fields.password || "";
+    const lifetime = (fields as any).lifetime || 72;
+    const read_count = (fields as any).read_count || 10;
+    const password = (fields as any).password || "";
 
-    // Convert Buffer → Uint8Array (required for Node fetch)
+    console.error(`SafeNote: uploading "${file.originalFilename}" (${fileBuffer.length} bytes)`);
+
     const fileData = new Uint8Array(fileBuffer);
-
-    // Prepare FormData
     const formData = new FormData();
-    formData.append("file", new Blob([fileData]), file.originalFilename);
+    formData.append("file", new Blob([fileData]), file.originalFilename || "upload.bin");
     formData.append("lifetime", lifetime.toString());
     formData.append("read_count", read_count.toString());
     if (password) formData.append("password", password);
 
-    // Upload to SafeNote
     const response = await fetch("https://safenote.co/api/file", {
       method: "POST",
       body: formData,
@@ -73,11 +73,11 @@ export default async function handler(
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("SafeNote error:", text);
+      console.error(`SafeNote: API returned ${response.status}:`, text);
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
       res.end(
-        JSON.stringify({ success: false, error: "Upload failed on SafeNote" })
+        JSON.stringify({ success: false, error: `Upload failed on SafeNote: HTTP ${response.status}` })
       );
       return;
     }
@@ -86,6 +86,7 @@ export default async function handler(
     const fileUrl = result?.link;
 
     if (!fileUrl) {
+      console.error("SafeNote: no link in response:", JSON.stringify(result));
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
       res.end(
@@ -97,12 +98,13 @@ export default async function handler(
       return;
     }
 
-    // Success
+    console.error(`SafeNote: upload success → ${fileUrl}`);
+
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: true, url: fileUrl }));
   } catch (err: any) {
-    console.error("SafeNote upload error:", err);
+    console.error("SafeNote: unexpected error:", err);
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: false, error: err.message }));

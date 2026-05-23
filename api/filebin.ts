@@ -21,13 +21,14 @@ export default async function handler(
   }
 
   try {
-    // Parse multipart/form-data
     const form = formidable({ multiples: false });
     const [fields, files] = await new Promise<[any, Files]>(
       (resolve, reject) => {
         form.parse(req, (err, fields, files) => {
-          if (err) reject(err);
-          else resolve([fields, files]);
+          if (err) {
+            console.error("Filebin: formidable parse error:", err);
+            reject(err);
+          } else resolve([fields, files]);
         });
       }
     );
@@ -37,6 +38,7 @@ export default async function handler(
       : (files as any).file;
 
     if (!file) {
+      console.error("Filebin: no file in request. Available fields:", Object.keys(files as any));
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(
@@ -48,52 +50,50 @@ export default async function handler(
     const fileBuffer = await fs.promises.readFile(file.filepath);
 
     if (!fileBuffer || fileBuffer.length === 0) {
+      console.error("Filebin: empty file buffer. Filepath:", file.filepath);
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ success: false, error: "Arquivo vazio" }));
       return;
     }
 
-    // Gera um bin aleatório
-    const binId = crypto.randomBytes(8).toString("hex");
+    console.error(`Filebin: uploading "${file.originalFilename}" (${fileBuffer.length} bytes)`);
 
-    // Converte Buffer para Uint8Array (compatível com fetch do Node 18+)
+    const binId = crypto.randomBytes(8).toString("hex");
+    const fileName = encodeURIComponent(file.originalFilename || "upload.bin");
     const fileData = new Uint8Array(fileBuffer);
 
-    // Faz o upload para o Filebin
     const response = await fetch(
-      `https://filebin.net/${binId}/${encodeURIComponent(
-        file.originalFilename
-      )}`,
+      `https://filebin.net/${binId}/${fileName}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/octet-stream",
         },
-        body: fileData, // ✅ Uint8Array funciona como BodyInit
+        body: fileData,
       }
     );
 
     if (response.status !== 201) {
       const text = await response.text();
-      console.error("Filebin error:", text);
+      console.error(`Filebin: API returned ${response.status}:`, text);
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
       res.end(
-        JSON.stringify({ success: false, error: "Upload falhou no Filebin" })
+        JSON.stringify({ success: false, error: `Upload falhou no Filebin: HTTP ${response.status}` })
       );
       return;
     }
 
-    const fileUrl = `https://filebin.net/${binId}/${encodeURIComponent(
-      file.originalFilename
-    )}`;
+    const fileUrl = `https://filebin.net/${binId}/${fileName}`;
+
+    console.error(`Filebin: upload success → ${fileUrl}`);
 
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: true, url: fileUrl }));
   } catch (err: any) {
-    console.error("Erro no processo de upload Filebin:", err);
+    console.error("Filebin: unexpected error:", err);
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: false, error: err.message }));

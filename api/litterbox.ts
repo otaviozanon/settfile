@@ -18,9 +18,12 @@ export default async function handler(
   try {
     const form = formidable({ multiples: false });
     const [fields, files] = await new Promise<[any, Files]>((resolve, reject) =>
-      form.parse(req, (err, fields, files) =>
-        err ? reject(err) : resolve([fields, files])
-      )
+      form.parse(req, (err, fields, files) => {
+        if (err) {
+          console.error("Litterbox: formidable parse error:", err);
+          reject(err);
+        } else resolve([fields, files]);
+      })
     );
 
     const file = Array.isArray((files as any).file)
@@ -28,6 +31,7 @@ export default async function handler(
       : (files as any).file;
 
     if (!file) {
+      console.error("Litterbox: no file in request. Available fields:", Object.keys(files as any));
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ success: false, error: "No file provided" }));
@@ -36,19 +40,24 @@ export default async function handler(
 
     const buffer = await fs.promises.readFile(file.filepath);
     if (!buffer || buffer.length === 0) {
+      console.error("Litterbox: empty file buffer");
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ success: false, error: "Empty file" }));
       return;
     }
 
-    const reqtype = (fields as any).reqtype || "fileupload";
     const time = (fields as any).time || "24h";
 
-    const uint8 = new Uint8Array(buffer);
+    console.error(`Litterbox: uploading "${file.originalFilename}" (${buffer.length} bytes, time=${time})`);
+
+    const uint8Array = new Uint8Array(buffer);
+    const blob = new Blob([uint8Array]);
+    const fileName = file.originalFilename || "upload.bin";
+
     const litterForm = new FormData();
-    litterForm.append("fileToUpload", new Blob([uint8]), file.originalFilename);
-    litterForm.append("reqtype", reqtype);
+    litterForm.append("reqtype", "fileupload");
+    litterForm.append("fileToUpload", blob, fileName);
     litterForm.append("time", time);
 
     const response = await fetch(
@@ -59,18 +68,25 @@ export default async function handler(
     const text = await response.text();
     const url = text.trim();
 
-    if (!url || !url.startsWith("https://")) {
+    if (!response.ok || !url.startsWith("https://")) {
+      console.error(`Litterbox: API returned ${response.status}:`, text);
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ success: false, error: "Litterbox returned invalid URL" }));
+      res.end(JSON.stringify({
+        success: false,
+        error: "Litterbox API error",
+        detail: url || `HTTP ${response.status}`,
+      }));
       return;
     }
+
+    console.error(`Litterbox: upload success → ${url}`);
 
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: true, url }));
   } catch (err: any) {
-    console.error("Erro no upload Litterbox:", err);
+    console.error("Litterbox: unexpected error:", err);
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: false, error: err.message }));

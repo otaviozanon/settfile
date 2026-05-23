@@ -18,9 +18,12 @@ export default async function handler(
   try {
     const form = formidable({ multiples: false });
     const [fields, files] = await new Promise<[any, Files]>((resolve, reject) =>
-      form.parse(req, (err, fields, files) =>
-        err ? reject(err) : resolve([fields, files])
-      )
+      form.parse(req, (err, fields, files) => {
+        if (err) {
+          console.error("Catbox: formidable parse error:", err);
+          reject(err);
+        } else resolve([fields, files]);
+      })
     );
 
     const file = Array.isArray((files as any).file)
@@ -28,6 +31,7 @@ export default async function handler(
       : (files as any).file;
 
     if (!file) {
+      console.error("Catbox: no file in request. Available fields:", Object.keys(files as any));
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ success: false, error: "No file provided" }));
@@ -36,20 +40,23 @@ export default async function handler(
 
     const buffer = await fs.promises.readFile(file.filepath);
     if (!buffer || buffer.length === 0) {
+      console.error("Catbox: empty file buffer");
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ success: false, error: "Empty file" }));
       return;
     }
 
-    const reqtype = (fields as any).reqtype || "fileupload";
-    const userhash = (fields as any).userhash || "";
+    console.error(`Catbox: uploading "${file.originalFilename}" (${buffer.length} bytes)`);
 
-    const uint8 = new Uint8Array(buffer);
+    const uint8Array = new Uint8Array(buffer);
+    const blob = new Blob([uint8Array]);
+    const fileName = file.originalFilename || "upload.bin";
+
     const catboxForm = new FormData();
-    catboxForm.append("fileToUpload", new Blob([uint8]), file.originalFilename);
-    catboxForm.append("reqtype", reqtype);
-    catboxForm.append("userhash", userhash);
+    catboxForm.append("reqtype", "fileupload");
+    catboxForm.append("fileToUpload", blob, fileName);
+    catboxForm.append("userhash", "");
 
     const response = await fetch("https://catbox.moe/user/api.php", {
       method: "POST",
@@ -59,18 +66,25 @@ export default async function handler(
     const text = await response.text();
     const url = text.trim();
 
-    if (!url || !url.startsWith("https://")) {
+    if (!response.ok || !url.startsWith("https://")) {
+      console.error(`Catbox: API returned ${response.status}:`, text);
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ success: false, error: "Catbox returned invalid URL" }));
+      res.end(JSON.stringify({
+        success: false,
+        error: "Catbox API error",
+        detail: url || `HTTP ${response.status}`,
+      }));
       return;
     }
+
+    console.error(`Catbox: upload success → ${url}`);
 
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: true, url }));
   } catch (err: any) {
-    console.error("Erro no upload Catbox:", err);
+    console.error("Catbox: unexpected error:", err);
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: false, error: err.message }));

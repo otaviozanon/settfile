@@ -18,24 +18,42 @@ export default async function handler(
   try {
     const form = formidable({ multiples: false });
     const [fields, files] = await new Promise<[any, Files]>((resolve, reject) =>
-      form.parse(req, (err, fields, files) =>
-        err ? reject(err) : resolve([fields, files])
-      )
+      form.parse(req, (err, fields, files) => {
+        if (err) {
+          console.error("Ufile: formidable parse error:", err);
+          reject(err);
+        } else resolve([fields, files]);
+      })
     );
 
     const file = Array.isArray((files as any).file)
       ? (files as any).file[0]
       : (files as any).file;
-    if (!file) throw new Error("Nenhum arquivo enviado");
+    if (!file) {
+      console.error("Ufile: no file in request. Available fields:", Object.keys(files as any));
+      res.statusCode = 400;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ success: false, error: "Nenhum arquivo enviado" }));
+      return;
+    }
 
     const buffer = await fs.promises.readFile(file.filepath);
-    if (!buffer || buffer.length === 0) throw new Error("Arquivo vazio");
+    if (!buffer || buffer.length === 0) {
+      console.error("Ufile: empty file buffer");
+      res.statusCode = 400;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ success: false, error: "Arquivo vazio" }));
+      return;
+    }
 
     const fileName = file.originalFilename || "upload.bin";
     const fileType = fileName.split(".").pop() || "bin";
     const fileData = new Uint8Array(buffer);
 
-    // 1. Criar sessão
+    console.error(`Ufile: uploading "${fileName}" (${fileData.byteLength} bytes)`);
+
+    // 1. Create session
+    console.error("Ufile: creating session...");
     const sessionResp = await fetch(
       "https://store-eu-hz-3.ufile.io/v1/upload/create_session",
       {
@@ -45,10 +63,22 @@ export default async function handler(
       }
     );
     const sessionJson = await sessionResp.json();
+    if (!sessionResp.ok || !sessionJson.fuid) {
+      console.error("Ufile: session creation failed:", sessionResp.status, JSON.stringify(sessionJson));
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({
+        success: false,
+        error: "Falha ao criar sessao Ufile",
+        detail: sessionJson.error || `HTTP ${sessionResp.status}`,
+      }));
+      return;
+    }
     const fuid = sessionJson.fuid;
-    if (!fuid) throw new Error("Falha ao criar sessão Ufile");
+    console.error(`Ufile: session created (fuid=${fuid})`);
 
-    // 2. Upload do chunk (somos 1 chunk)
+    // 2. Upload chunk
+    console.error("Ufile: uploading chunk...");
     const formData = new FormData();
     formData.append("chunk_index", "1");
     formData.append("fuid", fuid);
@@ -63,10 +93,21 @@ export default async function handler(
     );
 
     const chunkText = await chunkResp.text();
-    if (!chunkText.includes("Uploaded successfully"))
-      throw new Error("Falha no upload do chunk");
+    if (!chunkResp.ok || !chunkText.includes("Uploaded successfully")) {
+      console.error(`Ufile: chunk upload failed (${chunkResp.status}):`, chunkText);
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({
+        success: false,
+        error: "Falha no upload do chunk",
+        detail: `HTTP ${chunkResp.status}`,
+      }));
+      return;
+    }
+    console.error("Ufile: chunk uploaded");
 
-    // 3. Finalizar upload
+    // 3. Finalize
+    console.error("Ufile: finalizing...");
     const finalResp = await fetch(
       "https://store-eu-hz-3.ufile.io/v1/upload/finalise",
       {
@@ -82,13 +123,25 @@ export default async function handler(
     );
 
     const finalJson = await finalResp.json();
-    if (!finalJson.url) throw new Error("Falha ao finalizar upload");
+    if (!finalResp.ok || !finalJson.url) {
+      console.error("Ufile: finalize failed:", finalResp.status, JSON.stringify(finalJson));
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({
+        success: false,
+        error: "Falha ao finalizar upload",
+        detail: finalJson.error || `HTTP ${finalResp.status}`,
+      }));
+      return;
+    }
+
+    console.error(`Ufile: upload success → ${finalJson.url}`);
 
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: true, url: finalJson.url }));
   } catch (err: any) {
-    console.error("Erro no upload Ufile:", err);
+    console.error("Ufile: unexpected error:", err);
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ success: false, error: err.message }));
