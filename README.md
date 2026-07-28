@@ -12,15 +12,31 @@ Multi-provider file upload aggregator with automatic failover.
 
 ## Supported Providers
 
-| Provider                                 | Max Size | Retention        | Notes                               |
-| ---------------------------------------- | -------- | ---------------- | ----------------------------------- |
-| [Freeimage.host](https://freeimage.host) | 64 MB    | Indefinite       | ✅ Permanent storage                |
-| [tmpfiles.org](https://tmpfiles.org)     | 100 MB   | 1-48 hours       | ⚙️ Configurable (default: 60min)    |
-| [Filebin.net](https://filebin.net)       | 100 MB   | 7 days           | ✅ Auto-delete after 7 days         |
-| [SafeNote.co](https://safenote.co)       | 100 MB   | Up to 30 days    | ⚙️ Configurable (1h to 30 days)     |
-| [Ufile.io](https://ufile.io)             | 5 GB     | 30 days          | ⚠️ Free tier only (Pro: indefinite) |
-| [gofile.io](https://gofile.io)           | 10 GB    | Inactive cleanup | ⚠️ Removed after inactivity period  |
-| [Uguu.se](https://uguu.se)               | 128 MB   | 3 hours          | ✅ Fast temporary uploads           |
+| Provider                                  | Max Size | Retention  |
+| ----------------------------------------- | -------- | ---------- |
+| [Freeimage.host](https://freeimage.host)  | 64 MB    | Indefinite |
+| [tmpfiles.org](https://tmpfiles.org)      | 100 MB   | 60 minutes |
+| [Filebin.net](https://filebin.net)        | 100 MB   | 7 days     |
+| [SafeNote.co](https://safenote.co)        | 100 MB   | 24 hours   |
+| [catbox.moe](https://catbox.moe)          | 200 MB   | Indefinite |
+| [Litterbox](https://litterbox.catbox.moe) | 1 GB     | 24 hours   |
+| [Ufile.io](https://ufile.io)              | 5 GB     | Indefinite |
+| [gofile.io](https://gofile.io)            | 10 GB    | 7 days     |
+
+## Features
+
+- **Automatic failover** — tries next provider if current one fails
+- **Smart filtering** — only attempts providers that can handle the file size
+- **Manual selection** — pick a specific host instead of auto mode
+- **Drag & drop** — click or drag files to upload
+- **Real-time progress** — XHR-based progress tracking per upload
+- **Log panel** — timestamped, color-coded log of all upload attempts
+
+## Tech Stack
+
+- **Frontend:** React 18, TypeScript, Vite 7, Tailwind CSS 3
+- **Backend:** Node.js HTTP server (raw `http` module), TypeScript via `tsx`
+- **Proxy architecture** — browser uploads to local server, server forwards to third-party hosts (no direct CORS exposure)
 
 ## How It Works
 
@@ -44,8 +60,3 @@ settfile-main/
 ├── server.ts     # Node HTTP server
 └── vite.config.ts
 ```
-
-## Tech Stack
-
-**Frontend:** React 18, TypeScript, Vite 7, Tailwind CSS
-**Backend:** Node.js, TypeScript (tsx)
