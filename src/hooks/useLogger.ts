@@ -39,20 +39,9 @@ export function useLogger(options: UseLoggerOptions = {}) {
     setLogs([]);
   }, []);
 
-  const clearLogsAnimated = useCallback(
-    (delay: number = 150) => {
-      const copy = [...logs];
-      const interval = setInterval(() => {
-        if (copy.length === 0) {
-          clearInterval(interval);
-          return;
-        }
-        copy.pop();
-        setLogs([...copy]);
-      }, delay);
-    },
-    [logs],
-  );
+  const clearLogsAnimated = useCallback(() => {
+    setLogs([]);
+  }, []);
 
   return {
     logs,

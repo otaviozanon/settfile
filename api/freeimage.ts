@@ -8,7 +8,7 @@ const API_KEY = "6d207e02198a847aa98d0a2a901485a5";
 
 export default async function handler(
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
 ) {
   if (req.method !== "POST") {
     res.statusCode = 405;
@@ -24,7 +24,7 @@ export default async function handler(
           console.error("FreeImage: formidable parse error:", err);
           reject(err);
         } else resolve([fields, files]);
-      })
+      }),
     );
 
     const file = Array.isArray((files as any).file)
@@ -32,10 +32,15 @@ export default async function handler(
       : (files as any).file;
 
     if (!file) {
-      console.error("FreeImage: no file in request. Available fields:", Object.keys(files as any));
+      console.error(
+        "FreeImage: no file in request. Available fields:",
+        Object.keys(files as any),
+      );
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ success: false, error: "Nenhum arquivo enviado" }));
+      res.end(
+        JSON.stringify({ success: false, error: "Nenhum arquivo enviado" }),
+      );
       return;
     }
 
@@ -48,7 +53,9 @@ export default async function handler(
       return;
     }
 
-    console.error(`FreeImage: uploading "${file.originalFilename}" (${buffer.length} bytes)`);
+    console.log(
+      `FreeImage: uploading "${file.originalFilename}" (${buffer.length} bytes)`,
+    );
 
     const uint8Array = new Uint8Array(buffer);
     const blob = new Blob([uint8Array]);
@@ -67,18 +74,23 @@ export default async function handler(
     const result = await response.json();
 
     if (!response.ok || !result.image?.url) {
-      console.error(`FreeImage: API returned ${response.status}:`, JSON.stringify(result));
+      console.error(
+        `FreeImage: API returned ${response.status}:`,
+        JSON.stringify(result),
+      );
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({
-        success: false,
-        error: "FreeImage upload failed",
-        detail: result.error?.message || `HTTP ${response.status}`,
-      }));
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "FreeImage upload failed",
+          detail: result.error?.message || `HTTP ${response.status}`,
+        }),
+      );
       return;
     }
 
-    console.error(`FreeImage: upload success → ${result.image.url}`);
+    console.log(`FreeImage: upload success → ${result.image.url}`);
 
     res.statusCode = 200;
     res.end(JSON.stringify({ success: true, url: result.image.url }));

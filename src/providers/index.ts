@@ -1,11 +1,10 @@
-import { uploadToCatbox } from "./catbox";
 import { uploadToFilebin } from "./filebin";
 import { uploadToFreeimage } from "./freeimage";
 import { uploadToGofile } from "./gofile";
 import { uploadToSafeNote } from "./safenote";
 import { uploadToTmpfiles } from "./tmpfiles";
 import { uploadToUfile } from "./ufile";
-import { uploadToLitterbox } from "./litterbox";
+import { uploadToUguu } from "./uguu";
 
 export interface Provider {
   id: string;
@@ -31,7 +30,7 @@ export const PROVIDERS: Provider[] = [
     id: "tmpfiles",
     name: "tmpfiles.org",
     maxMB: 100,
-    expire: "60 minutes",
+    expire: "1-48 hours", // Configurable: 60min default, up to 48h
     upload: uploadToTmpfiles,
   },
   {
@@ -45,36 +44,28 @@ export const PROVIDERS: Provider[] = [
     id: "safenote",
     name: "SafeNote.co",
     maxMB: 100,
-    expire: "24 hours",
+    expire: "Up to 30 days", // Configurable: 1h to 30 days
     upload: uploadToSafeNote,
-  },
-  {
-    id: "catbox",
-    name: "catbox.moe",
-    maxMB: 200,
-    expire: "Indefinite",
-    upload: uploadToCatbox,
-  },
-  {
-    id: "litterbox",
-    name: "Litterbox",
-    maxMB: 1024, // 1 GB
-    expire: "24 hours",
-    upload: uploadToLitterbox,
   },
   {
     id: "ufile",
     name: "Ufile.io",
     maxMB: 5120, // 5 GB
-    expire: "Indefinite",
+    expire: "30 days", // Free tier: 30 days, Pro: indefinite
     upload: uploadToUfile,
   },
   {
     id: "gofile",
     name: "gofile.io",
     maxMB: 10240, // 10 GB
-    expire: "7 days",
+    expire: "Inactive cleanup", // Files removed after period of inactivity (free tier)
     upload: uploadToGofile,
   },
-
+  {
+    id: "uguu",
+    name: "Uguu.se",
+    maxMB: 128, // 128 MB
+    expire: "3 hours", // Fixed 3 hours
+    upload: uploadToUguu,
+  },
 ];

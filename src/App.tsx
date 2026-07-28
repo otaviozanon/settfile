@@ -17,7 +17,7 @@ import { Download } from "lucide-react";
 function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [dragActive, setDragActive] = useState(false);
-  const itemsPerPage = 6; // Show 6 providers per page (11 total = 2 pages)
+  const itemsPerPage = 7; // Show 7 providers per page (7 total = 1 page)
 
   // Use custom hooks for cleaner state management
   const { logs, addLog, clearLogsAnimated } = useLogger({ maxLogs: 50 });
@@ -32,7 +32,8 @@ function App() {
     retryWithAnotherProvider,
     abortControllerRef,
   } = useFileUpload({
-    onLog: (message, level) => addLog(message, level as LogEntry["level"] || "info"),
+    onLog: (message, level) =>
+      addLog(message, (level as LogEntry["level"]) || "info"),
     onSuccess: (result) => {
       addLog(`Upload successful: ${result.url}`, "success");
     },

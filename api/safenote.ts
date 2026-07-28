@@ -10,7 +10,7 @@ export const config = {
 
 export default async function handler(
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
 ) {
   if (req.method !== "POST") {
     res.statusCode = 405;
@@ -29,7 +29,7 @@ export default async function handler(
             reject(err);
           } else resolve([fields, files]);
         });
-      }
+      },
     );
 
     const file = Array.isArray((files as any).file)
@@ -37,7 +37,10 @@ export default async function handler(
       : (files as any).file;
 
     if (!file) {
-      console.error("SafeNote: no file in request. Available fields:", Object.keys(files as any));
+      console.error(
+        "SafeNote: no file in request. Available fields:",
+        Object.keys(files as any),
+      );
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ success: false, error: "No file provided" }));
@@ -57,11 +60,17 @@ export default async function handler(
     const read_count = (fields as any).read_count || 10;
     const password = (fields as any).password || "";
 
-    console.error(`SafeNote: uploading "${file.originalFilename}" (${fileBuffer.length} bytes)`);
+    console.log(
+      `SafeNote: uploading "${file.originalFilename}" (${fileBuffer.length} bytes)`,
+    );
 
     const fileData = new Uint8Array(fileBuffer);
     const formData = new FormData();
-    formData.append("file", new Blob([fileData]), file.originalFilename || "upload.bin");
+    formData.append(
+      "file",
+      new Blob([fileData]),
+      file.originalFilename || "upload.bin",
+    );
     formData.append("lifetime", lifetime.toString());
     formData.append("read_count", read_count.toString());
     if (password) formData.append("password", password);
@@ -77,7 +86,10 @@ export default async function handler(
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
       res.end(
-        JSON.stringify({ success: false, error: `Upload failed on SafeNote: HTTP ${response.status}` })
+        JSON.stringify({
+          success: false,
+          error: `Upload failed on SafeNote: HTTP ${response.status}`,
+        }),
       );
       return;
     }
@@ -93,12 +105,12 @@ export default async function handler(
         JSON.stringify({
           success: false,
           error: "SafeNote did not return a link",
-        })
+        }),
       );
       return;
     }
 
-    console.error(`SafeNote: upload success → ${fileUrl}`);
+    console.log(`SafeNote: upload success → ${fileUrl}`);
 
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");

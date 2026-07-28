@@ -1,59 +1,28 @@
-# settfile
+# SETTFILE
 
-Multi-provider file upload aggregator with automatic failover. Upload a file once, and it will be hosted on the first available service among 8 supported providers.
-
-## Supported Providers
-
-| Provider | Max Size | Retention |
-|----------|----------|-----------|
-| [Freeimage.host](https://freeimage.host) | 64 MB | Indefinite |
-| [tmpfiles.org](https://tmpfiles.org) | 100 MB | 60 minutes |
-| [Filebin.net](https://filebin.net) | 100 MB | 7 days |
-| [SafeNote.co](https://safenote.co) | 100 MB | 24 hours |
-| [catbox.moe](https://catbox.moe) | 200 MB | Indefinite |
-| [Litterbox](https://litterbox.catbox.moe) | 1 GB | 24 hours |
-| [Ufile.io](https://ufile.io) | 5 GB | Indefinite |
-| [gofile.io](https://gofile.io) | 10 GB | 7 days |
+Multi-provider file upload aggregator with automatic failover.
 
 ## Features
 
-- **Automatic failover** — tries next provider if current one fails
-- **Smart filtering** — only attempts providers that can handle the file size
-- **Manual selection** — pick a specific host instead of auto mode
-- **Drag & drop** — click or drag files to upload
-- **Real-time progress** — XHR-based progress tracking per upload
-- **Log panel** — timestamped, color-coded log of all upload attempts
+- **7 providers** with automatic failover
+- **Smart filtering** by file size
+- **Drag & drop** upload
+- **Real-time progress** tracking
+- **Manual provider selection** option
 
-## Tech Stack
+## Supported Providers
 
-- **Frontend:** React 18, TypeScript, Vite 7, Tailwind CSS 3
-- **Backend:** Node.js HTTP server (raw `http` module), TypeScript via `tsx`
-- **Proxy architecture** — browser uploads to local server, server forwards to third-party hosts (no direct CORS exposure)
-
-## Getting Started
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server (with HMR)
-npm run dev
-# → http://localhost:3000
-
-# Build for production
-npm run build
-
-# Run production server
-npm start
-```
-
-Set `PORT` in `.env` to change the default port (3000).
+| Provider                                 | Max Size | Retention        | Notes                               |
+| ---------------------------------------- | -------- | ---------------- | ----------------------------------- |
+| [Freeimage.host](https://freeimage.host) | 64 MB    | Indefinite       | ✅ Permanent storage                |
+| [tmpfiles.org](https://tmpfiles.org)     | 100 MB   | 1-48 hours       | ⚙️ Configurable (default: 60min)    |
+| [Filebin.net](https://filebin.net)       | 100 MB   | 7 days           | ✅ Auto-delete after 7 days         |
+| [SafeNote.co](https://safenote.co)       | 100 MB   | Up to 30 days    | ⚙️ Configurable (1h to 30 days)     |
+| [Ufile.io](https://ufile.io)             | 5 GB     | 30 days          | ⚠️ Free tier only (Pro: indefinite) |
+| [gofile.io](https://gofile.io)           | 10 GB    | Inactive cleanup | ⚠️ Removed after inactivity period  |
+| [Uguu.se](https://uguu.se)               | 128 MB   | 3 hours          | ✅ Fast temporary uploads           |
 
 ## How It Works
-
-```
-Browser (XHR) → localhost:3000/api/{provider} → Node Server → Third-Party Host
-```
 
 1. User selects a file and optional host
 2. Frontend sends file via XHR to the local Node server
@@ -61,12 +30,22 @@ Browser (XHR) → localhost:3000/api/{provider} → Node Server → Third-Party 
 4. Host URL is returned to the frontend
 5. User can swap to another host with one click
 
-## Scripts
+## Structure
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start dev server with Vite HMR |
-| `npm run build` | Build frontend for production |
-| `npm start` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Run TypeScript type checking |
+```
+settfile-main/
+├── api/          # Server-side upload handlers (7 providers)
+├── src/
+│   ├── components/    # React components
+│   ├── hooks/         # useFileUpload, useLogger
+│   ├── providers/     # Frontend upload logic
+│   ├── types/         # TypeScript definitions
+│   └── utils/         # Validation helpers
+├── server.ts     # Node HTTP server
+└── vite.config.ts
+```
+
+## Tech Stack
+
+**Frontend:** React 18, TypeScript, Vite 7, Tailwind CSS
+**Backend:** Node.js, TypeScript (tsx)
