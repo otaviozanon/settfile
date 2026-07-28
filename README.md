@@ -2,6 +2,10 @@
 
 Multi-provider file upload aggregator with automatic failover.
 
+<p align="center">
+  <a href="https://settfile.onrender.com/"><strong>SETT File</strong></a>
+</p>
+
 ## Features
 
 - **7 providers** with automatic failover
