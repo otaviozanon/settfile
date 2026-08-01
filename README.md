@@ -64,3 +64,7 @@ settfile-main/
 ├── server.ts     # Node HTTP server
 └── vite.config.ts
 ```
+
+## 📄 License
+
+GPL-3.0. See [LICENSE](/LICENSE).
